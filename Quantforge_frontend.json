@@ -1,0 +1,900 @@
+{
+  "name": "Quantforge",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "a7d76a99-ad6d-4189-a923-b3467e300a16",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "faed97e2-1130-4c19-82b4-d590632704ec",
+              "name": "research_objective",
+              "value": "={{ $json.research_objective || \"Find a trading strategy for EUR/USD that improves risk-adjusted performance while keeping drawdown reasonably low.\" }}",
+              "type": "string"
+            },
+            {
+              "id": "badcc03f-de0a-413f-b372-9b8832277aeb",
+              "name": "instrument",
+              "value": "={{ $json.instrument || \"EURUSD\" }}",
+              "type": "string"
+            },
+            {
+              "id": "2a8bb41a-077c-486a-ae0d-0a871703f9a7",
+              "name": "timeframe",
+              "value": "={{ $json.timeframe || \"15m\" }}",
+              "type": "string"
+            },
+            {
+              "id": "e8f63052-8e71-4717-b820-576b7af35998",
+              "name": "starting_capital",
+              "value": "={{ Number($json.starting_capital || 10000) }}",
+              "type": "number"
+            },
+            {
+              "id": "9ad3df0b-f2f5-41df-bb96-4e700b8b4421",
+              "name": "experiment",
+              "value": "={{ Number($json.experiment || 1) }}",
+              "type": "number"
+            },
+            {
+              "id": "a8914ae6-9544-4f5d-a2f4-c4a2afde4ea7",
+              "name": "max_experiments",
+              "value": "={{ Number($json.max_experiments || 5) }}",
+              "type": "number"
+            },
+            {
+              "id": "8f5038e3-ed12-461e-86ad-8c7673138b8f",
+              "name": "research_run_id",
+              "value": "={{ $json.research_run_id || \"demo_run_001\" }}",
+              "type": "string"
+            },
+            {
+              "id": "7083316d-29d5-462c-a9e9-8c2b4be4ce56",
+              "name": "history",
+              "value": "={{ Array.isArray($json.history) ? $json.history : [] }}",
+              "type": "array"
+            }
+          ]
+        },
+        "includeOtherFields": "={{ false }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        224,
+        0
+      ],
+      "id": "307436c0-d57d-479a-a68e-c3505f5e42f2",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "model": "llama3.2:3b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        448,
+        240
+      ],
+      "id": "768440fe-2fc8-4658-97ee-15bd1212decf",
+      "name": "Ollama Chat Model1",
+      "credentials": {
+        "ollamaApi": {
+          "id": "JXdYuVAkGyE4Wkgt",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "llama3.2:3b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        1584,
+        256
+      ],
+      "id": "05de1fc4-8f72-490e-9b24-dd9d95745883",
+      "name": "Ollama Chat Model",
+      "credentials": {
+        "ollamaApi": {
+          "id": "JXdYuVAkGyE4Wkgt",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "f2b290a1-b17e-4326-99dd-9dba2bb2a3e8",
+              "leftValue": "={{ Number($json.experiment) }}",
+              "rightValue": "={{ Number($json.max_experiments) }}",
+              "operator": {
+                "type": "number",
+                "operation": "lt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        3168,
+        -16
+      ],
+      "id": "120710c5-6d07-4b36-b267-cfde8c54a3c6",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "ebe7f60c-70ec-4372-841d-999e7b903125",
+              "leftValue": "={{ $json.experiment }}",
+              "rightValue": "={{ $json.max_experiments }}",
+              "operator": {
+                "type": "number",
+                "operation": "lt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        3520,
+        -32
+      ],
+      "id": "c4175a55-b7bb-4cfa-a2fd-13ba9f239291",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// =========================================================\n// QuantForge - Prepare Next Experiment\n// =========================================================\n// Purpose:\n// 1. Prepare the next experiment after Critic\n// 2. Increment experiment number\n// 3. Use Critic's proposed configuration when available\n// 4. If Critic ACCEPTED the current configuration,\n//    deterministically create a new refinement\n// 5. Never repeat an already-tested configuration\n// 6. Preserve immutable research context\n// =========================================================\n\n\n// =========================================================\n// CURRENT INPUT\n// =========================================================\n\nconst current = $json;\n\n\n// =========================================================\n// BASIC CONTEXT\n// =========================================================\n\nconst currentExperiment =\n  Number(\n    current.experiment || 1\n  );\n\nconst maxExperiments =\n  Number(\n    current.max_experiments || 5\n  );\n\nconst nextExperiment =\n  currentExperiment + 1;\n\n\nconst instrument =\n  current.instrument ||\n  current.strategy_config?.data?.instrument;\n\nconst timeframe =\n  current.timeframe ||\n  current.strategy_config?.data?.timeframe;\n\nconst startingCapital =\n  Number(\n    current.starting_capital ??\n    current.strategy_config?.capital?.starting_capital ??\n    10000\n  );\n\nconst researchRunId =\n  current.research_run_id ||\n  current.strategy_config?.research?.research_run_id;\n\n\nconst history =\n  Array.isArray(current.history)\n    ? current.history\n    : [];\n\n\n// =========================================================\n// STOP PROTECTION\n// =========================================================\n\nif (\n  nextExperiment > maxExperiments\n) {\n\n  return [{\n    json: {\n\n      ...current,\n\n      experiment:\n        nextExperiment,\n\n      max_experiments:\n        maxExperiments,\n\n      final_experiment:\n        true\n\n    }\n  }];\n\n}\n\n\n// =========================================================\n// CURRENT STRATEGY CONFIG\n// =========================================================\n\nconst currentConfig =\n  current.strategy_config;\n\n\nif (\n  !currentConfig ||\n  typeof currentConfig !== \"object\" ||\n  Array.isArray(currentConfig)\n) {\n\n  throw new Error(\n    \"Prepare Next Experiment: strategy_config is missing.\"\n  );\n\n}\n\n\n// =========================================================\n// SIGNATURE FUNCTION\n// =========================================================\n\nfunction signature(config) {\n\n  return JSON.stringify({\n\n    strategy:\n      config.strategy,\n\n    parameters:\n      config.parameters || {},\n\n    stop_loss:\n      config.risk?.stop_loss,\n\n    take_profit:\n      config.risk?.take_profit,\n\n    lot_size:\n      config.risk?.lot_size\n\n  });\n\n}\n\n\n// =========================================================\n// CHECK WHETHER CONFIG WAS ALREADY TESTED\n// =========================================================\n\nfunction alreadyTested(config) {\n\n  const candidateSignature =\n    signature(config);\n\n\n  return history.some(\n    record => {\n\n      if (\n        !record ||\n        typeof record !== \"object\"\n      ) {\n\n        return false;\n\n      }\n\n\n      if (\n        !record.strategy_config\n      ) {\n\n        return false;\n\n      }\n\n\n      return (\n        signature(\n          record.strategy_config\n        ) ===\n        candidateSignature\n      );\n\n    }\n  );\n\n}\n\n\n// =========================================================\n// DEEP COPY\n// =========================================================\n\nfunction clone(value) {\n\n  return JSON.parse(\n    JSON.stringify(value)\n  );\n\n}\n\n\n// =========================================================\n// NORMALIZE CONFIG\n// =========================================================\n\nfunction normalizeConfig(config) {\n\n  const result =\n    clone(config);\n\n\n  result.data = {\n\n    instrument:\n      instrument,\n\n    timeframe:\n      timeframe\n\n  };\n\n\n  result.research = {\n\n    research_run_id:\n      researchRunId\n\n  };\n\n\n  result.capital = {\n\n    starting_capital:\n      startingCapital\n\n  };\n\n\n  return result;\n\n}\n\n\n// =========================================================\n// CANDIDATE CONFIGURATIONS\n// =========================================================\n\nconst candidates = [];\n\n\n// =========================================================\n// 1. CURRENT / CRITIC CONFIG\n// =========================================================\n//\n// If Critic returned MODIFY, this may already contain\n// a different strategy or different parameters.\n//\n// We try it first.\n// =========================================================\n\nconst criticCandidate =\n  normalizeConfig(\n    currentConfig\n  );\n\ncandidates.push(\n  criticCandidate\n);\n\n\n// =========================================================\n// STRATEGY-SPECIFIC REFINEMENT CANDIDATES\n// =========================================================\n\nconst strategy =\n  currentConfig.strategy;\n\nconst parameters =\n  currentConfig.parameters || {};\n\nconst risk =\n  currentConfig.risk || {};\n\n\n// =========================================================\n// EMA CROSSOVER\n// =========================================================\n\nif (\n  strategy === \"EMA_Crossover\"\n) {\n\n  const fast =\n    Number(\n      parameters.fast_ema\n    );\n\n  const slow =\n    Number(\n      parameters.slow_ema\n    );\n\n\n  // Candidate A:\n  // Slightly faster fast EMA\n\n  if (\n    fast > 5\n  ) {\n\n    candidates.push({\n\n      strategy:\n        \"EMA_Crossover\",\n\n      parameters: {\n\n        fast_ema:\n          fast - 1,\n\n        slow_ema:\n          slow\n\n      },\n\n      risk:\n        clone(risk),\n\n      data: {\n\n        instrument:\n          instrument,\n\n        timeframe:\n          timeframe\n\n      },\n\n      research: {\n\n        research_run_id:\n          researchRunId\n\n      },\n\n      capital: {\n\n        starting_capital:\n          startingCapital\n\n      }\n\n    });\n\n  }\n\n\n  // Candidate B:\n  // Slightly slower fast EMA\n\n  if (\n    fast < 30 &&\n    fast + 1 < slow\n  ) {\n\n    candidates.push({\n\n      strategy:\n        \"EMA_Crossover\",\n\n      parameters: {\n\n        fast_ema:\n          fast + 1,\n\n        slow_ema:\n          slow\n\n      },\n\n      risk:\n        clone(risk),\n\n      data: {\n\n        instrument:\n          instrument,\n\n        timeframe:\n          timeframe\n\n      },\n\n      research: {\n\n        research_run_id:\n          researchRunId\n\n      },\n\n      capital: {\n\n        starting_capital:\n          startingCapital\n\n      }\n\n    });\n\n  }\n\n\n  // Candidate C:\n  // Increase slow EMA\n\n  if (\n    slow < 100\n  ) {\n\n    candidates.push({\n\n      strategy:\n        \"EMA_Crossover\",\n\n      parameters: {\n\n        fast_ema:\n          fast,\n\n        slow_ema:\n          slow + 5\n\n      },\n\n      risk:\n        clone(risk),\n\n      data: {\n\n        instrument:\n          instrument,\n\n        timeframe:\n          timeframe\n\n      },\n\n      research: {\n\n        research_run_id:\n          researchRunId\n\n      },\n\n      capital: {\n\n        starting_capital:\n          startingCapital\n\n      }\n\n    });\n\n  }\n\n\n  // Candidate D:\n  // Decrease slow EMA\n\n  if (\n    slow > 20 &&\n    slow - 5 > fast\n  ) {\n\n    candidates.push({\n\n      strategy:\n        \"EMA_Crossover\",\n\n      parameters: {\n\n        fast_ema:\n          fast,\n\n        slow_ema:\n          slow - 5\n\n      },\n\n      risk:\n        clone(risk),\n\n      data: {\n\n        instrument:\n          instrument,\n\n        timeframe:\n          timeframe\n\n      },\n\n      research: {\n\n        research_run_id:\n          researchRunId\n\n      },\n\n      capital: {\n\n        starting_capital:\n          startingCapital\n\n      }\n\n    });\n\n  }\n\n\n  // Candidate E:\n  // Change to RSI family\n\n  candidates.push({\n\n    strategy:\n      \"RSI_Mean_Reversion\",\n\n    parameters: {\n\n      rsi_period:\n        14,\n\n      oversold:\n        30,\n\n      overbought:\n        70\n\n    },\n\n    risk:\n      clone(risk),\n\n    data: {\n\n      instrument:\n        instrument,\n\n      timeframe:\n        timeframe\n\n    },\n\n    research: {\n\n      research_run_id:\n        researchRunId\n\n    },\n\n    capital: {\n\n      starting_capital:\n        startingCapital\n\n    }\n\n  });\n\n\n  // Candidate F:\n  // Change to Supertrend\n\n  candidates.push({\n\n    strategy:\n      \"Supertrend\",\n\n    parameters: {\n\n      atr_period:\n        10,\n\n      multiplier:\n        3\n\n    },\n\n    risk:\n      clone(risk),\n\n    data: {\n\n      instrument:\n        instrument,\n\n      timeframe:\n        timeframe\n\n    },\n\n    research: {\n\n      research_run_id:\n        researchRunId\n\n    },\n\n    capital: {\n\n      starting_capital:\n        startingCapital\n\n    }\n\n  });\n\n}\n\n\n// =========================================================\n// RSI MEAN REVERSION\n// =========================================================\n\nif (\n  strategy === \"RSI_Mean_Reversion\"\n) {\n\n  const period =\n    Number(\n      parameters.rsi_period\n    );\n\n  const oversold =\n    Number(\n      parameters.oversold\n    );\n\n  const overbought =\n    Number(\n      parameters.overbought\n    );\n\n\n  // Candidate A:\n  // Shorter RSI period\n\n  if (\n    period > 5\n  ) {\n\n    candidates.push({\n\n      strategy:\n        \"RSI_Mean_Reversion\",\n\n      parameters: {\n\n        rsi_period:\n          period - 1,\n\n        oversold:\n          oversold,\n\n        overbought:\n          overbought\n\n      },\n\n      risk:\n        clone(risk),\n\n      data: {\n\n        instrument:\n          instrument,\n\n        timeframe:\n          timeframe\n\n      },\n\n      research: {\n\n        research_run_id:\n          researchRunId\n\n      },\n\n      capital: {\n\n        starting_capital:\n          startingCapital\n\n      }\n\n    });\n\n  }\n\n\n  // Candidate B:\n  // Longer RSI period\n\n  if (\n    period < 30\n  ) {\n\n    candidates.push({\n\n      strategy:\n        \"RSI_Mean_Reversion\",\n\n      parameters: {\n\n        rsi_period:\n          period + 1,\n\n        oversold:\n          oversold,\n\n        overbought:\n          overbought\n\n      },\n\n      risk:\n        clone(risk),\n\n      data: {\n\n        instrument:\n          instrument,\n\n        timeframe:\n          timeframe\n\n      },\n\n      research: {\n\n        research_run_id:\n          researchRunId\n\n      },\n\n      capital: {\n\n        starting_capital:\n          startingCapital\n\n      }\n\n    });\n\n  }\n\n\n  // Candidate C:\n  // Wider oversold threshold\n\n  if (\n    oversold > 20\n  ) {\n\n    candidates.push({\n\n      strategy:\n        \"RSI_Mean_Reversion\",\n\n      parameters: {\n\n        rsi_period:\n          period,\n\n        oversold:\n          oversold - 5,\n\n        overbought:\n          overbought\n\n      },\n\n      risk:\n        clone(risk),\n\n      data: {\n\n        instrument:\n          instrument,\n\n        timeframe:\n          timeframe\n\n      },\n\n      research: {\n\n        research_run_id:\n          researchRunId\n\n      },\n\n      capital: {\n\n        starting_capital:\n          startingCapital\n\n      }\n\n    });\n\n  }\n\n\n  // Candidate D:\n  // Lower overbought threshold\n\n  if (\n    overbought > 60\n  ) {\n\n    candidates.push({\n\n      strategy:\n        \"RSI_Mean_Reversion\",\n\n      parameters: {\n\n        rsi_period:\n          period,\n\n        oversold:\n          oversold,\n\n        overbought:\n          overbought - 5\n\n      },\n\n      risk:\n        clone(risk),\n\n      data: {\n\n        instrument:\n          instrument,\n\n        timeframe:\n          timeframe\n\n      },\n\n      research: {\n\n        research_run_id:\n          researchRunId\n\n      },\n\n      capital: {\n\n        starting_capital:\n          startingCapital\n\n      }\n\n    });\n\n  }\n\n\n  // Candidate E:\n  // Switch to EMA\n\n  candidates.push({\n\n    strategy:\n      \"EMA_Crossover\",\n\n    parameters: {\n\n      fast_ema:\n        10,\n\n      slow_ema:\n        30\n\n    },\n\n    risk:\n      clone(risk),\n\n    data: {\n\n      instrument:\n        instrument,\n\n      timeframe:\n        timeframe\n\n    },\n\n    research: {\n\n      research_run_id:\n        researchRunId\n\n    },\n\n    capital: {\n\n      starting_capital:\n        startingCapital\n\n    }\n\n  });\n\n\n  // Candidate F:\n  // Switch to Supertrend\n\n  candidates.push({\n\n    strategy:\n      \"Supertrend\",\n\n    parameters: {\n\n      atr_period:\n        10,\n\n      multiplier:\n        3\n\n    },\n\n    risk:\n      clone(risk),\n\n    data: {\n\n      instrument:\n        instrument,\n\n      timeframe:\n        timeframe\n\n    },\n\n    research: {\n\n      research_run_id:\n        researchRunId\n\n    },\n\n    capital: {\n\n      starting_capital:\n        startingCapital\n\n    }\n\n  });\n\n}\n\n\n// =========================================================\n// SUPERTREND\n// =========================================================\n\nif (\n  strategy === \"Supertrend\"\n) {\n\n  const atrPeriod =\n    Number(\n      parameters.atr_period\n    );\n\n  const multiplier =\n    Number(\n      parameters.multiplier\n    );\n\n\n  // Candidate A:\n  // Lower ATR period\n\n  if (\n    atrPeriod > 5\n  ) {\n\n    candidates.push({\n\n      strategy:\n        \"Supertrend\",\n\n      parameters: {\n\n        atr_period:\n          atrPeriod - 1,\n\n        multiplier:\n          multiplier\n\n      },\n\n      risk:\n        clone(risk),\n\n      data: {\n\n        instrument:\n          instrument,\n\n        timeframe:\n          timeframe\n\n      },\n\n      research: {\n\n        research_run_id:\n          researchRunId\n\n      },\n\n      capital: {\n\n        starting_capital:\n          startingCapital\n\n      }\n\n    });\n\n  }\n\n\n  // Candidate B:\n  // Higher ATR period\n\n  if (\n    atrPeriod < 30\n  ) {\n\n    candidates.push({\n\n      strategy:\n        \"Supertrend\",\n\n      parameters: {\n\n        atr_period:\n          atrPeriod + 1,\n\n        multiplier:\n          multiplier\n\n      },\n\n      risk:\n        clone(risk),\n\n      data: {\n\n        instrument:\n          instrument,\n\n        timeframe:\n          timeframe\n\n      },\n\n      research: {\n\n        research_run_id:\n          researchRunId\n\n      },\n\n      capital: {\n\n        starting_capital:\n          startingCapital\n\n      }\n\n    });\n\n  }\n\n\n  // Candidate C:\n  // Lower multiplier\n\n  if (\n    multiplier > 1\n  ) {\n\n    candidates.push({\n\n      strategy:\n        \"Supertrend\",\n\n      parameters: {\n\n        atr_period:\n          atrPeriod,\n\n        multiplier:\n          Math.max(\n            1,\n            Number(\n              (\n                multiplier - 0.5\n              ).toFixed(1)\n            )\n          )\n\n      },\n\n      risk:\n        clone(risk),\n\n      data: {\n\n        instrument:\n          instrument,\n\n        timeframe:\n          timeframe\n\n      },\n\n      research: {\n\n        research_run_id:\n          researchRunId\n\n      },\n\n      capital: {\n\n        starting_capital:\n          startingCapital\n\n      }\n\n    });\n\n  }\n\n\n  // Candidate D:\n  // Higher multiplier\n\n  if (\n    multiplier < 5\n  ) {\n\n    candidates.push({\n\n      strategy:\n        \"Supertrend\",\n\n      parameters: {\n\n        atr_period:\n          atrPeriod,\n\n        multiplier:\n          Math.min(\n            5,\n            Number(\n              (\n                multiplier + 0.5\n              ).toFixed(1)\n            )\n          )\n\n      },\n\n      risk:\n        clone(risk),\n\n      data: {\n\n        instrument:\n          instrument,\n\n        timeframe:\n          timeframe\n\n      },\n\n      research: {\n\n        research_run_id:\n          researchRunId\n\n      },\n\n      capital: {\n\n        starting_capital:\n          startingCapital\n\n      }\n\n    });\n\n  }\n\n\n  // Candidate E:\n  // Switch to EMA\n\n  candidates.push({\n\n    strategy:\n      \"EMA_Crossover\",\n\n    parameters: {\n\n      fast_ema:\n        10,\n\n      slow_ema:\n        30\n\n    },\n\n    risk:\n      clone(risk),\n\n    data: {\n\n      instrument:\n        instrument,\n\n      timeframe:\n        timeframe\n\n    },\n\n    research: {\n\n      research_run_id:\n        researchRunId\n\n    },\n\n    capital: {\n\n      starting_capital:\n        startingCapital\n\n    }\n\n  });\n\n\n  // Candidate F:\n  // Switch to RSI\n\n  candidates.push({\n\n    strategy:\n      \"RSI_Mean_Reversion\",\n\n    parameters: {\n\n      rsi_period:\n        14,\n\n      oversold:\n        30,\n\n      overbought:\n        70\n\n    },\n\n    risk:\n      clone(risk),\n\n    data: {\n\n      instrument:\n        instrument,\n\n      timeframe:\n        timeframe\n\n    },\n\n    research: {\n\n      research_run_id:\n        researchRunId\n\n    },\n\n    capital: {\n\n      starting_capital:\n        startingCapital\n\n    }\n\n  });\n\n}\n\n\n// =========================================================\n// FIND FIRST UNUSED CANDIDATE\n// =========================================================\n\nlet selectedConfig =\n  null;\n\n\nfor (\n  const candidate of candidates\n) {\n\n  const normalized =\n    normalizeConfig(\n      candidate\n    );\n\n\n  if (\n    !alreadyTested(\n      normalized\n    )\n  ) {\n\n    selectedConfig =\n      normalized;\n\n    break;\n\n  }\n\n}\n\n\n// =========================================================\n// NO VALID CANDIDATE\n// =========================================================\n\nif (\n  !selectedConfig\n) {\n\n  throw new Error(\n    \"Unable to create a new unique experiment configuration.\"\n  );\n\n}\n\n\n// =========================================================\n// FINAL OUTPUT\n// =========================================================\n\nreturn [{\n  json: {\n\n    decision:\n      \"MODIFY\",\n\n    retry_required:\n      false,\n\n    reason:\n      \"Prepared a new unique configuration for the next experiment.\",\n\n    research_run_id:\n      researchRunId,\n\n    instrument:\n      instrument,\n\n    timeframe:\n      timeframe,\n\n    starting_capital:\n      startingCapital,\n\n    experiment:\n      nextExperiment,\n\n    max_experiments:\n      maxExperiments,\n\n    strategy:\n      selectedConfig.strategy,\n\n    strategy_config:\n      selectedConfig,\n\n    history:\n      history,\n\n    fast_ema:\n      selectedConfig.strategy === \"EMA_Crossover\"\n        ? selectedConfig.parameters.fast_ema\n        : null,\n\n    slow_ema:\n      selectedConfig.strategy === \"EMA_Crossover\"\n        ? selectedConfig.parameters.slow_ema\n        : null,\n\n    rsi_period:\n      selectedConfig.strategy === \"RSI_Mean_Reversion\"\n        ? selectedConfig.parameters.rsi_period\n        : null,\n\n    oversold:\n      selectedConfig.strategy === \"RSI_Mean_Reversion\"\n        ? selectedConfig.parameters.oversold\n        : null,\n\n    overbought:\n      selectedConfig.strategy === \"RSI_Mean_Reversion\"\n        ? selectedConfig.parameters.overbought\n        : null,\n\n    atr_period:\n      selectedConfig.strategy === \"Supertrend\"\n        ? selectedConfig.parameters.atr_period\n        : null,\n\n    multiplier:\n      selectedConfig.strategy === \"Supertrend\"\n        ? selectedConfig.parameters.multiplier\n        : null,\n\n    stop_loss:\n      selectedConfig.risk.stop_loss,\n\n    take_profit:\n      selectedConfig.risk.take_profit,\n\n    lot_size:\n      selectedConfig.risk.lot_size\n\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4064,
+        -48
+      ],
+      "id": "78715132-51b1-4d6b-a461-d31ec051efd8",
+      "name": "Prepare Next Experiment"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are the QuantForge Researcher.\n\nYour job is to propose ONE valid trading strategy configuration for the current experiment.\n\nQuantForge is a research and validation framework. You are NOT placing trades and you are NOT combining multiple strategy families unless explicitly supported.\n\n==================================================\nRESEARCH OBJECTIVE\n==================================================\n\nResearch objective:\n{{ $json.research_objective }}\n\n==================================================\nCURRENT RESEARCH CONTEXT\n==================================================\n\nInstrument:\n{{ $json.instrument }}\n\nTimeframe:\n{{ $json.timeframe }}\n\nStarting capital:\n{{ $json.starting_capital }}\n\nCurrent experiment:\n{{ $json.experiment }}\n\nMaximum experiments:\n{{ $json.max_experiments }}\n\nPrevious experiment history:\n{{ JSON.stringify($json.history || []) }}\n\n==================================================\nSUPPORTED STRATEGY FAMILIES\n==================================================\n\nYou MUST select EXACTLY ONE of these strategy families:\n\n1. EMA_Crossover\n\nParameters:\n- fast_ema: integer from 5 to 30\n- slow_ema: integer from 20 to 100\n- slow_ema MUST be greater than fast_ema\n\n2. RSI_Mean_Reversion\n\nParameters:\n- rsi_period: integer from 5 to 30\n- oversold: 20 to 40\n- overbought: 60 to 80\n- oversold MUST be less than overbought\n\n3. Supertrend\n\nParameters:\n- atr_period: integer from 5 to 30\n- multiplier: 1.0 to 5.0\n\n==================================================\nCRITICAL STRATEGY RULE\n==================================================\n\nSELECT EXACTLY ONE STRATEGY FAMILY.\n\nNEVER combine strategy families.\n\nInvalid examples:\n\n\"EMA_Crossover | RSI_Mean_Reversion\"\n\n\"EMA_Crossover + RSI_Mean_Reversion\"\n\n\"EMA_Crossover and RSI_Mean_Reversion\"\n\n\"EMA_Crossover + Supertrend\"\n\n\"RSI_Mean_Reversion + Supertrend\"\n\nDo NOT include parameters from another strategy family.\n\nFor example, if you select EMA_Crossover, the parameters MUST contain only:\n\n{\n  \"fast_ema\": ...,\n  \"slow_ema\": ...\n}\n\nDo NOT add rsi_period, oversold, overbought, atr_period, or multiplier.\n\nIf you select RSI_Mean_Reversion, the parameters MUST contain only:\n\n{\n  \"rsi_period\": ...,\n  \"oversold\": ...,\n  \"overbought\": ...\n}\n\nIf you select Supertrend, the parameters MUST contain only:\n\n{\n  \"atr_period\": ...,\n  \"multiplier\": ...\n}\n\n==================================================\nCOMMON RISK PARAMETERS\n==================================================\n\nEvery strategy must contain:\n\nstop_loss:\n- positive number\n\ntake_profit:\n- positive number\n\nlot_size:\n- greater than 0\n- less than or equal to starting capital\n\nThe default risk values may be refined based on research evidence, but they must remain valid.\n\n==================================================\nRESEARCH REASONING\n==================================================\n\nUse the research objective and previous experiment history to decide what should be tested.\n\nThe goal is NOT to randomly generate parameters.\n\nUse previous results to decide whether to:\n\n- refine the current strategy family,\n- switch to another strategy family,\n- change strategy parameters,\n- explore a different risk configuration.\n\nIf previous experiments performed poorly, another strategy family may be tested.\n\nIf a previous strategy performed reasonably well, refine its parameters rather than blindly repeating the same configuration.\n\nDo NOT repeat an identical configuration that already exists in experiment history.\n\nPython will calculate:\n\n- return\n- trades\n- win rate\n- profit factor\n- maximum drawdown\n- Sharpe ratio\n- Heat score\n\nDo NOT invent these metrics.\n\nDo NOT calculate backtest results yourself.\n\n==================================================\nIMMUTABLE CONTEXT\n==================================================\n\nYou MUST preserve:\n\ninstrument:\n{{ $json.instrument }}\n\ntimeframe:\n{{ $json.timeframe }}\n\nstarting capital:\n{{ $json.starting_capital }}\n\nresearch_run_id:\n{{ $json.research_run_id }}\n\nDo not change these values.\n\n==================================================\nRETRY CONTEXT\n==================================================\n\nIf the input contains:\n\nretry_required:\ntrue\n\nthen a previous Researcher response was invalid.\n\nReason:\n{{ $json.retry_reason }}\n\nCorrect the previous mistake.\n\nIn particular, if the previous response contained multiple strategy families, select exactly ONE strategy family.\n\n==================================================\nOUTPUT FORMAT\n==================================================\n\nReturn ONLY valid JSON.\n\nDo not return explanations.\n\nDo not use Markdown.\n\nDo not use code fences.\n\nDo not return multiple candidate strategies.\n\nReturn exactly ONE strategy configuration.\n\nRequired format:\n\n{\n  \"strategy_config\": {\n    \"strategy\": \"ONE_SUPPORTED_STRATEGY\",\n    \"parameters\": {},\n    \"risk\": {\n      \"stop_loss\": 0.001,\n      \"take_profit\": 0.002,\n      \"lot_size\": 5000\n    },\n    \"data\": {\n      \"instrument\": \"{{ $json.instrument }}\",\n      \"timeframe\": \"{{ $json.timeframe }}\"\n    },\n    \"research\": {\n      \"research_run_id\": \"{{ $json.research_run_id }}\"\n    },\n    \"capital\": {\n      \"starting_capital\": {{ $json.starting_capital }}\n    }\n  }\n}\n\nThe strategy field must contain exactly one of:\n\n\"EMA_Crossover\"\n\n\"RSI_Mean_Reversion\"\n\n\"Supertrend\"\n\nNever put multiple strategy names in the strategy field.",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        448,
+        0
+      ],
+      "id": "e634082b-b693-4534-9f53-5f6925dfde6e",
+      "name": "Researcher AI"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are the QuantForge Critic and Experiment Planner.\n\nQuantForge is a research system for automated strategy experimentation.\nIt is NOT a live trading system.\n\nYour task is to analyze the CURRENT experiment and propose the next\nstrategy configuration.\n\nIMPORTANT:\n\nPython is the source of truth for ALL numerical results.\n\nPython has already calculated:\n- return\n- trades\n- win rate\n- profit factor\n- maximum drawdown\n- Sharpe ratio\n- Heat Score\n- Heat Label\n- Heat Checks\n\nDO NOT calculate or reinterpret these values.\n\n==================================================\nSOURCE OF TRUTH\n==================================================\n\nThe following values come directly from Python.\n\nCURRENT EXPERIMENT:\n\nExperiment:\n{{ $json.experiment }}\n\nMaximum experiments:\n{{ $json.max_experiments }}\n\nStrategy:\n{{ $json.strategy }}\n\nCurrent strategy configuration:\n{{ JSON.stringify($json.strategy_config) }}\n\nCurrent return:\n{{ $json.return_percent }}\n\nCurrent trades:\n{{ $json.trades }}\n\nCurrent win rate:\n{{ $json.win_rate }}\n\nCurrent profit factor:\n{{ $json.profit_factor }}\n\nCurrent maximum drawdown:\n{{ $json.max_drawdown_percent }}\n\nCurrent Sharpe ratio:\n{{ $json.sharpe_ratio }}\n\nCURRENT HEAT:\n\nCurrent Heat Score:\n{{ $json.heat_score }}\n\nCurrent Heat Label:\n{{ $json.heat_label }}\n\nCurrent Heat Checks:\n{{ JSON.stringify($json.heat_checks) }}\n\nPREVIOUS EXPERIMENT HISTORY:\n\n{{ JSON.stringify($json.history || []) }}\n\n==================================================\nCRITICAL HEAT RULE\n==================================================\n\nThe CURRENT Heat Score and CURRENT Heat Label above are authoritative.\n\nCOPY THEM EXACTLY.\n\nDO NOT replace them with a Heat value from history.\n\nDO NOT calculate a Heat Score.\n\nDO NOT infer a Heat Score from return, Sharpe, profit factor,\ndrawdown, or any other metric.\n\nFor the current experiment, the following two fields MUST be copied\nexactly from the CURRENT HEAT section:\n\ncurrent_heat_score = {{ $json.heat_score }}\n\ncurrent_heat_label = \"{{ $json.heat_label }}\"\n\nIf history exists, the previous Heat values MUST come from the\nMOST RECENT experiment in history.\n\nThe history is ordered chronologically.\n\nTherefore:\n\nPrevious experiment = the LAST object in history.\n\nPrevious Heat Score = the heat_score of the LAST history object.\n\nPrevious Heat Label = the heat_label of the LAST history object.\n\nDo NOT use Experiment 1 as the previous experiment unless Experiment 1\nis the only experiment in history.\n\n==================================================\nHEAT ANALYSIS\n==================================================\n\nYou must include a heat_analysis object.\n\nThe heat_analysis must report the supplied Python values.\n\nFor the current experiment:\n\ncurrent_heat_score:\n{{ $json.heat_score }}\n\ncurrent_heat_label:\n{{ $json.heat_label }}\n\nIf history is empty:\n\nprevious_heat_score = null\nprevious_heat_label = null\nheat_change = null\nassessment = \"BASELINE\"\n\nIf history is NOT empty:\n\nUse the LAST history object.\n\nPrevious experiment:\n{{ JSON.stringify(($json.history || []).length ? $json.history[$json.history.length - 1] : null) }}\n\nCopy its heat_score and heat_label.\n\nThe assessment must be one of:\n\n\"IMPROVED\"\n\"WORSENED\"\n\"UNCHANGED\"\n\n==================================================\nIMPORTANT\n==================================================\n\nDo NOT manually calculate a different current Heat Score.\n\nDo NOT use an earlier experiment's Heat Score as the current Heat Score.\n\nFor example, if history contains:\n\nExperiment 1:\nHeat Score = 4\nHeat Label = VERY HOT\n\nExperiment 2:\nHeat Score = 1\nHeat Label = COOL\n\nand the current experiment has:\n\nHeat Score = 1\nHeat Label = COOL\n\nthen:\n\nprevious_heat_score = 1\nprevious_heat_label = COOL\n\ncurrent_heat_score = 1\ncurrent_heat_label = COOL\n\nNOT:\n\ncurrent_heat_score = 4\n\nThe most recent experiment is the previous experiment.\n\n==================================================\nRESEARCH OBJECTIVE\n==================================================\n\n{{ $json.research_objective || 'Optimize the strategy according to the research objective.' }}\n\n==================================================\nDECISION RULE\n==================================================\n\nDo NOT stop research merely because an experiment is profitable.\n\nThe workflow continues until max_experiments is reached.\n\nACCEPT means that the current configuration is acceptable for the\nresearch process.\n\nThe final system separately selects the best experiment.\n\n==================================================\nSUPPORTED STRATEGIES\n==================================================\n\nYou may select exactly ONE strategy family.\n\n1. EMA_Crossover\n\nParameters:\nfast_ema: integer 5-30\nslow_ema: integer 20-100\n\nConstraint:\nslow_ema > fast_ema\n\n2. RSI_Mean_Reversion\n\nParameters:\nrsi_period: integer 5-30\noversold: 20-40\noverbought: 60-80\n\nConstraint:\noversold < overbought\n\n3. Supertrend\n\nParameters:\natr_period: integer 5-30\nmultiplier: 1-5\n\nDO NOT combine strategy families.\n\nDO NOT create hybrid strategies.\n\n==================================================\nRISK PARAMETERS\n==================================================\n\nstop_loss:\npositive number\n\ntake_profit:\npositive number\n\nlot_size:\npositive number\n\nlot_size must not exceed starting capital.\n\n==================================================\nIMMUTABLE CONTEXT\n==================================================\n\nNever change:\n\ninstrument\ntimeframe\nstarting capital\nresearch_run_id\n\n==================================================\nEXPERIMENTATION\n==================================================\n\nUse previous experiments as evidence.\n\nIf Heat improved:\nrefine around the configuration associated with the improvement.\n\nIf Heat worsened:\nconsider reversing the detrimental change, changing another parameter,\nor switching strategy family if justified.\n\nIf Heat stayed unchanged:\nmake a meaningful parameter change or switch strategy family if\nsupported by the previous evidence.\n\nDo not propose a configuration that already exists in history.\n\nPython will perform the next backtest and calculate all metrics.\n\n==================================================\nOUTPUT\n==================================================\n\nReturn ONLY valid JSON.\n\nNo Markdown.\n\nNo code fences.\n\nNo explanatory text outside JSON.\n\nFor MODIFY:\n\n{\n  \"decision\": \"MODIFY\",\n  \"reason\": \"Explain how the previous and current Heat affected the next experiment.\",\n  \"heat_analysis\": {\n    \"previous_heat_score\": 1,\n    \"previous_heat_label\": \"COOL\",\n    \"current_heat_score\": 1,\n    \"current_heat_label\": \"COOL\",\n    \"heat_change\": 0,\n    \"assessment\": \"UNCHANGED\"\n  },\n  \"strategy_config\": {\n    \"strategy\": \"RSI_Mean_Reversion\",\n    \"parameters\": {\n      \"rsi_period\": 15,\n      \"oversold\": 30,\n      \"overbought\": 70\n    },\n    \"risk\": {\n      \"stop_loss\": 0.001,\n      \"take_profit\": 0.002,\n      \"lot_size\": 5000\n    },\n    \"data\": {\n      \"instrument\": \"EURUSD\",\n      \"timeframe\": \"15m\"\n    },\n    \"capital\": {\n      \"starting_capital\": 10000\n    },\n    \"research\": {\n      \"research_run_id\": \"demo_run_001\"\n    }\n  }\n}\n\nFor ACCEPT:\n\n{\n  \"decision\": \"ACCEPT\",\n  \"reason\": \"Explain the current Heat and its comparison with the previous experiment.\",\n  \"heat_analysis\": {\n    \"previous_heat_score\": 1,\n    \"previous_heat_label\": \"COOL\",\n    \"current_heat_score\": 1,\n    \"current_heat_label\": \"COOL\",\n    \"heat_change\": 0,\n    \"assessment\": \"UNCHANGED\"\n  }\n}\n\nFor Experiment 1 with no previous history:\n\n{\n  \"decision\": \"MODIFY\",\n  \"reason\": \"No previous experiment exists, so there is no previous Heat value for comparison. The current experiment provides the baseline for subsequent Heat-aware experimentation.\",\n  \"heat_analysis\": {\n    \"previous_heat_score\": null,\n    \"previous_heat_label\": null,\n    \"current_heat_score\": {{ $json.heat_score }},\n    \"current_heat_label\": \"{{ $json.heat_label }}\",\n    \"heat_change\": null,\n    \"assessment\": \"BASELINE\"\n  },\n  \"strategy_config\": {\n    \"strategy\": \"EMA_Crossover\",\n    \"parameters\": {\n      \"fast_ema\": 15,\n      \"slow_ema\": 30\n    },\n    \"risk\": {\n      \"stop_loss\": 0.001,\n      \"take_profit\": 0.002,\n      \"lot_size\": 5000\n    },\n    \"data\": {\n      \"instrument\": \"EURUSD\",\n      \"timeframe\": \"15m\"\n    },\n    \"capital\": {\n      \"starting_capital\": 10000\n    },\n    \"research\": {\n      \"research_run_id\": \"demo_run_001\"\n    }\n  }\n}\n\nFINAL REQUIREMENTS:\n\n1. Return valid JSON only.\n2. Include heat_analysis.\n3. Copy current_heat_score exactly from Python.\n4. Copy current_heat_label exactly from Python.\n5. Use the LAST history item as the previous experiment.\n6. Never use Experiment 1 as the previous experiment when newer history exists.\n7. Never calculate a new Heat Score.\n8. Never invent Heat values.\n9. Do not combine strategy families.\n10. Do not duplicate an existing strategy configuration.",
+        "hasOutputParser": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        1584,
+        0
+      ],
+      "id": "92414646-f371-429b-878f-3d8a60bc1d66",
+      "name": "Critic AI"
+    },
+    {
+      "parameters": {
+        "jsCode": "const output = $json.output;\n\nconst backtest = $(\"HTTP Request\").item.json;\n\nconst currentConfig =\n  backtest.strategy_config || {};\n\nconst history =\n  Array.isArray(backtest.history)\n    ? backtest.history\n    : [];\n\n\n// =========================================================\n// HELPERS\n// =========================================================\n\nfunction toNumber(value, fallback = null) {\n  const n = Number(value);\n  return Number.isFinite(n) ? n : fallback;\n}\n\n\nfunction cleanString(value, fallback = null) {\n  if (value === undefined || value === null) {\n    return fallback;\n  }\n\n  return String(value);\n}\n\n\n// =========================================================\n// HEAT\n// =========================================================\n//\n// Python is authoritative.\n//\n// The parser does NOT recalculate Heat when Python already\n// supplied it.\n//\n// A fallback calculation is included only for compatibility\n// with older executions that may not contain Heat fields.\n// =========================================================\n\nfunction deriveHeatFromMetrics(backtestData) {\n\n  const returnPercent =\n    toNumber(backtestData.return_percent);\n\n  const profitFactor =\n    toNumber(backtestData.profit_factor);\n\n  const sharpe =\n    toNumber(backtestData.sharpe_ratio);\n\n  const drawdown =\n    toNumber(backtestData.max_drawdown_percent);\n\n  if (\n    returnPercent === null ||\n    profitFactor === null ||\n    sharpe === null ||\n    drawdown === null\n  ) {\n    return {\n      heat_score: null,\n      heat_label: null,\n      heat_checks: null\n    };\n  }\n\n  const checks = {\n    positive_return:\n      returnPercent > 0,\n\n    profit_factor_above_1:\n      profitFactor > 1,\n\n    positive_sharpe:\n      sharpe > 0,\n\n    drawdown_better_than_10_percent:\n      drawdown > -10\n  };\n\n  const score =\n    Object.values(checks)\n      .filter(Boolean)\n      .length;\n\n  let label = \"COLD\";\n\n  if (score === 1) {\n    label = \"COOL\";\n  }\n  else if (score === 2) {\n    label = \"WARM\";\n  }\n  else if (score === 3) {\n    label = \"HOT\";\n  }\n  else if (score === 4) {\n    label = \"VERY HOT\";\n  }\n\n  return {\n    heat_score: score,\n    heat_label: label,\n    heat_checks: checks\n  };\n}\n\n\nfunction getCurrentHeat(data) {\n\n  if (\n    data.heat_score !== undefined &&\n    data.heat_label !== undefined\n  ) {\n\n    return {\n      heat_score:\n        toNumber(data.heat_score),\n\n      heat_label:\n        cleanString(data.heat_label),\n\n      heat_checks:\n        data.heat_checks || null\n    };\n\n  }\n\n  return deriveHeatFromMetrics(data);\n}\n\n\nconst currentHeat =\n  getCurrentHeat(backtest);\n\n\n// =========================================================\n// HISTORY HEAT NORMALIZATION\n// =========================================================\n//\n// Older history entries may not contain Heat.\n//\n// New entries will always contain it.\n// =========================================================\n\nfunction normalizeHistoryEntry(entry) {\n\n  if (\n    entry &&\n    entry.heat_score !== undefined &&\n    entry.heat_label !== undefined\n  ) {\n\n    return {\n      ...entry,\n\n      heat_score:\n        toNumber(entry.heat_score),\n\n      heat_label:\n        cleanString(entry.heat_label),\n\n      heat_checks:\n        entry.heat_checks || null\n    };\n\n  }\n\n  const derived =\n    deriveHeatFromMetrics(entry || {});\n\n  return {\n    ...entry,\n\n    heat_score:\n      derived.heat_score,\n\n    heat_label:\n      derived.heat_label,\n\n    heat_checks:\n      derived.heat_checks\n  };\n}\n\n\nconst normalizedHistory =\n  history.map(\n    normalizeHistoryEntry\n  );\n\n\n// =========================================================\n// PREVIOUS HEAT\n// =========================================================\n\nlet previousHeatScore = null;\nlet previousHeatLabel = null;\n\nif (normalizedHistory.length > 0) {\n\n  const previous =\n    normalizedHistory[\n      normalizedHistory.length - 1\n    ];\n\n  previousHeatScore =\n    toNumber(previous.heat_score);\n\n  previousHeatLabel =\n    cleanString(previous.heat_label);\n}\n\n\n// =========================================================\n// HEAT COMPARISON\n// =========================================================\n\nlet heatChange = null;\nlet heatAssessment = \"BASELINE\";\n\nif (\n  previousHeatScore !== null &&\n  currentHeat.heat_score !== null\n) {\n\n  heatChange =\n    currentHeat.heat_score -\n    previousHeatScore;\n\n  if (heatChange > 0) {\n    heatAssessment = \"IMPROVED\";\n  }\n  else if (heatChange < 0) {\n    heatAssessment = \"WORSENED\";\n  }\n  else {\n    heatAssessment = \"UNCHANGED\";\n  }\n}\n\n\n// =========================================================\n// RETRY HELPER\n// =========================================================\n\nfunction retry(\n  reason,\n  rejectedConfig = null\n) {\n\n  const previousRetryCount =\n    Number(\n      $json.retry_count || 0\n    );\n\n  return [{\n    json: {\n\n      decision:\n        \"RETRY\",\n\n      retry_required:\n        true,\n\n      retry_count:\n        previousRetryCount + 1,\n\n      retry_reason:\n        reason,\n\n      reason:\n        reason,\n\n      rejected_configuration:\n        rejectedConfig,\n\n      strategy:\n        currentConfig.strategy ||\n        backtest.strategy,\n\n      strategy_config:\n        currentConfig,\n\n      instrument:\n        currentConfig.data?.instrument ||\n        backtest.instrument,\n\n      timeframe:\n        currentConfig.data?.timeframe ||\n        backtest.timeframe,\n\n      starting_capital:\n        Number(\n          currentConfig.capital?.starting_capital ||\n          backtest.initial_capital ||\n          backtest.starting_capital ||\n          10000\n        ),\n\n      research_run_id:\n        currentConfig.research?.research_run_id ||\n        backtest.research_run_id,\n\n      experiment:\n        Number(\n          backtest.experiment || 1\n        ),\n\n      max_experiments:\n        Number(\n          backtest.max_experiments || 5\n        ),\n\n      return_percent:\n        Number(\n          backtest.return_percent\n        ),\n\n      trades:\n        Number(\n          backtest.trades\n        ),\n\n      win_rate:\n        Number(\n          backtest.win_rate\n        ),\n\n      profit_factor:\n        Number(\n          backtest.profit_factor\n        ),\n\n      max_drawdown_percent:\n        Number(\n          backtest.max_drawdown_percent\n        ),\n\n      sharpe_ratio:\n        Number(\n          backtest.sharpe_ratio\n        ),\n\n      heat_score:\n        currentHeat.heat_score,\n\n      heat_label:\n        currentHeat.heat_label,\n\n      heat_checks:\n        currentHeat.heat_checks,\n\n      previous_heat_score:\n        previousHeatScore,\n\n      previous_heat_label:\n        previousHeatLabel,\n\n      heat_change:\n        heatChange,\n\n      heat_assessment:\n        heatAssessment,\n\n      history:\n        normalizedHistory\n    }\n  }];\n}\n\n\n// =========================================================\n// BASIC OUTPUT VALIDATION\n// =========================================================\n\nif (\n  typeof output !== \"string\" ||\n  output.trim() === \"\"\n) {\n\n  return retry(\n    \"Critic AI output was empty.\"\n  );\n\n}\n\n\n// =========================================================\n// EXTRACT DECISION\n// =========================================================\n\nlet decision = null;\n\nconst decisionMatch =\n  output.match(\n    /\"decision\"\\s*:\\s*\"(MODIFY|ACCEPT|RETRY)\"/i\n  );\n\nif (decisionMatch) {\n\n  decision =\n    decisionMatch[1]\n      .toUpperCase();\n\n}\n\nif (!decision) {\n\n  const textDecision =\n    output.match(\n      /\\b(MODIFY|ACCEPT|RETRY)\\b/i\n    );\n\n  if (textDecision) {\n\n    decision =\n      textDecision[1]\n        .toUpperCase();\n\n  }\n}\n\n\n// =========================================================\n// EXTRACT BALANCED JSON OBJECTS\n// =========================================================\n\nfunction extractJsonObjects(text) {\n\n  const objects = [];\n\n  let depth = 0;\n  let start = -1;\n  let inString = false;\n  let escaped = false;\n\n  for (\n    let i = 0;\n    i < text.length;\n    i++\n  ) {\n\n    const char =\n      text[i];\n\n    if (escaped) {\n\n      escaped = false;\n\n      continue;\n\n    }\n\n    if (\n      char === \"\\\\\" &&\n      inString\n    ) {\n\n      escaped = true;\n\n      continue;\n\n    }\n\n    if (char === '\"') {\n\n      inString =\n        !inString;\n\n      continue;\n\n    }\n\n    if (inString) {\n      continue;\n    }\n\n    if (char === \"{\") {\n\n      if (depth === 0) {\n        start = i;\n      }\n\n      depth++;\n\n    }\n\n    else if (char === \"}\") {\n\n      depth--;\n\n      if (\n        depth === 0 &&\n        start !== -1\n      ) {\n\n        objects.push(\n          text.substring(\n            start,\n            i + 1\n          )\n        );\n\n        start = -1;\n\n      }\n\n    }\n\n  }\n\n  return objects;\n}\n\n\nconst candidates =\n  extractJsonObjects(output);\n\nconst parsedCandidates = [];\n\n\nfor (\n  const candidate of candidates\n) {\n\n  try {\n\n    const parsed =\n      JSON.parse(candidate);\n\n    if (\n      parsed &&\n      typeof parsed === \"object\" &&\n      !Array.isArray(parsed)\n    ) {\n\n      parsedCandidates.push(\n        parsed\n      );\n\n    }\n\n  }\n\n  catch (error) {\n\n    // Ignore malformed candidates.\n\n  }\n\n}\n\n\n// =========================================================\n// FIND PARSED DECISION\n// =========================================================\n\nlet parsed =\n  parsedCandidates.find(\n    candidate =>\n      candidate.decision === decision\n  );\n\n\nif (!parsed) {\n\n  parsed =\n    parsedCandidates.find(\n      candidate =>\n        candidate.strategy_config\n    );\n\n}\n\n\n// =========================================================\n// HEAT ANALYSIS VALIDATION\n// =========================================================\n//\n// This is the important new protection.\n//\n// The Critic must explicitly return heat_analysis.\n// The parser verifies that its values agree with Python.\n// =========================================================\n\nfunction validateHeatAnalysis(\n  candidate\n) {\n\n  const analysis =\n    candidate?.heat_analysis;\n\n  if (\n    !analysis ||\n    typeof analysis !== \"object\"\n  ) {\n\n    return {\n      valid: false,\n      reason:\n        \"Critic must provide heat_analysis explicitly.\"\n    };\n\n  }\n\n  const candidateCurrentScore =\n    analysis.current_heat_score === null ||\n    analysis.current_heat_score === undefined\n      ? null\n      : Number(\n          analysis.current_heat_score\n        );\n\n  const candidatePreviousScore =\n    analysis.previous_heat_score === null ||\n    analysis.previous_heat_score === undefined\n      ? null\n      : Number(\n          analysis.previous_heat_score\n        );\n\n  const candidateChange =\n    analysis.heat_change === null ||\n    analysis.heat_change === undefined\n      ? null\n      : Number(\n          analysis.heat_change\n        );\n\n\n  // Current score must match Python.\n\n  if (\n    candidateCurrentScore !==\n    currentHeat.heat_score\n  ) {\n\n    return {\n      valid: false,\n      reason:\n        \"Critic heat_analysis current_heat_score does not match Python Heat Score.\"\n    };\n\n  }\n\n\n  // Previous score must match history.\n\n  if (\n    candidatePreviousScore !==\n    previousHeatScore\n  ) {\n\n    return {\n      valid: false,\n      reason:\n        \"Critic heat_analysis previous_heat_score does not match previous experiment Heat.\"\n    };\n\n  }\n\n\n  // Validate score change.\n\n  if (\n    previousHeatScore !== null &&\n    currentHeat.heat_score !== null\n  ) {\n\n    const expectedChange =\n      currentHeat.heat_score -\n      previousHeatScore;\n\n    if (\n      candidateChange !==\n      expectedChange\n    ) {\n\n      return {\n        valid: false,\n        reason:\n          \"Critic heat_analysis heat_change is incorrect.\"\n      };\n\n    }\n\n  }\n  else {\n\n    if (\n      candidateChange !== null\n    ) {\n\n      return {\n        valid: false,\n        reason:\n          \"Critic heat_analysis heat_change must be null for the baseline experiment.\"\n      };\n\n    }\n\n  }\n\n\n  // Validate labels.\n\n  if (\n    cleanString(\n      analysis.current_heat_label\n    ) !==\n    currentHeat.heat_label\n  ) {\n\n    return {\n      valid: false,\n      reason:\n        \"Critic current_heat_label does not match Python Heat.\"\n    };\n\n  }\n\n\n  if (\n    cleanString(\n      analysis.previous_heat_label\n    ) !==\n    previousHeatLabel\n  ) {\n\n    return {\n      valid: false,\n      reason:\n        \"Critic previous_heat_label does not match history.\"\n    };\n\n  }\n\n\n  // Validate assessment.\n\n  if (\n    cleanString(\n      analysis.assessment\n    ) !==\n    heatAssessment\n  ) {\n\n    return {\n      valid: false,\n      reason:\n        \"Critic Heat assessment does not match the actual Heat change.\"\n    };\n\n  }\n\n\n  return {\n    valid: true\n  };\n}\n\n\n// =========================================================\n// REQUIRE HEAT ANALYSIS\n// =========================================================\n\nif (\n  !parsed ||\n  !parsed.heat_analysis\n) {\n\n  return retry(\n    \"Critic did not explicitly provide the required heat_analysis.\"\n  );\n\n}\n\n\nconst heatValidation =\n  validateHeatAnalysis(\n    parsed\n  );\n\n\nif (\n  !heatValidation.valid\n) {\n\n  return retry(\n    heatValidation.reason\n  );\n\n}\n\n\n// =========================================================\n// REQUIRE HEAT REFERENCE IN REASON\n// =========================================================\n//\n// This prevents a technically correct heat_analysis object\n// from being ignored in the actual reasoning.\n// =========================================================\n\nconst reasonText =\n  String(\n    parsed.reason || \"\"\n  );\n\nif (\n  !/\\bheat\\b/i.test(reasonText)\n) {\n\n  return retry(\n    \"Critic reason must explicitly discuss Heat and how the Heat change influenced the decision.\"\n  );\n\n}\n\n\n// =========================================================\n// ACCEPT\n// =========================================================\n\nif (\n  decision === \"ACCEPT\"\n) {\n\n  const reason =\n    parsed.reason ||\n    \"Critic accepted the current strategy.\";\n\n  const updatedHistory =\n    normalizedHistory.slice();\n\n\n  const currentExperiment = {\n\n    experiment:\n      Number(\n        backtest.experiment || 1\n      ),\n\n    strategy:\n      currentConfig.strategy ||\n      backtest.strategy,\n\n    strategy_config:\n      currentConfig,\n\n    return_percent:\n      Number(\n        backtest.return_percent\n      ),\n\n    trades:\n      Number(\n        backtest.trades\n      ),\n\n    win_rate:\n      Number(\n        backtest.win_rate\n      ),\n\n    profit_factor:\n      Number(\n        backtest.profit_factor\n      ),\n\n    max_drawdown_percent:\n      Number(\n        backtest.max_drawdown_percent\n      ),\n\n    sharpe_ratio:\n      Number(\n        backtest.sharpe_ratio\n      ),\n\n    heat_score:\n      currentHeat.heat_score,\n\n    heat_label:\n      currentHeat.heat_label,\n\n    heat_checks:\n      currentHeat.heat_checks\n  };\n\n\n  const alreadyStored =\n    updatedHistory.some(\n      exp =>\n        Number(exp.experiment) ===\n        Number(\n          backtest.experiment\n        )\n    );\n\n\n  if (\n    !alreadyStored\n  ) {\n\n    updatedHistory.push(\n      currentExperiment\n    );\n\n  }\n\n\n  return [{\n    json: {\n\n      decision:\n        \"ACCEPT\",\n\n      retry_required:\n        false,\n\n      reason,\n\n      heat_analysis:\n        parsed.heat_analysis,\n\n      strategy:\n        currentConfig.strategy ||\n        backtest.strategy,\n\n      strategy_config:\n        currentConfig,\n\n      instrument:\n        currentConfig.data?.instrument ||\n        backtest.instrument,\n\n      timeframe:\n        currentConfig.data?.timeframe ||\n        backtest.timeframe,\n\n      starting_capital:\n        Number(\n          currentConfig.capital?.starting_capital ||\n          backtest.initial_capital ||\n          backtest.starting_capital ||\n          10000\n        ),\n\n      research_run_id:\n        currentConfig.research?.research_run_id ||\n        backtest.research_run_id,\n\n      experiment:\n        Number(\n          backtest.experiment || 1\n        ),\n\n      max_experiments:\n        Number(\n          backtest.max_experiments || 5\n        ),\n\n      return_percent:\n        Number(\n          backtest.return_percent\n        ),\n\n      trades:\n        Number(\n          backtest.trades\n        ),\n\n      win_rate:\n        Number(\n          backtest.win_rate\n        ),\n\n      profit_factor:\n        Number(\n          backtest.profit_factor\n        ),\n\n      max_drawdown_percent:\n        Number(\n          backtest.max_drawdown_percent\n        ),\n\n      sharpe_ratio:\n        Number(\n          backtest.sharpe_ratio\n        ),\n\n      heat_score:\n        currentHeat.heat_score,\n\n      heat_label:\n        currentHeat.heat_label,\n\n      heat_checks:\n        currentHeat.heat_checks,\n\n      previous_heat_score:\n        previousHeatScore,\n\n      previous_heat_label:\n        previousHeatLabel,\n\n      heat_change:\n        heatChange,\n\n      heat_assessment:\n        heatAssessment,\n\n      history:\n        updatedHistory\n\n    }\n  }];\n\n}\n\n\n// =========================================================\n// MODIFY VALIDATION\n// =========================================================\n\nif (\n  decision !== \"MODIFY\"\n) {\n\n  return retry(\n    \"Critic did not provide a valid MODIFY or ACCEPT decision.\"\n  );\n\n}\n\n\nif (\n  !parsed ||\n  !parsed.strategy_config\n) {\n\n  return retry(\n    \"Critic proposed MODIFY but no strategy_config was found.\"\n  );\n\n}\n\n\nconst proposedConfig =\n  parsed.strategy_config;\n\n\n// =========================================================\n// STRATEGY\n// =========================================================\n\nconst strategy =\n  proposedConfig.strategy;\n\n\nif (\n  strategy !== \"EMA_Crossover\" &&\n  strategy !== \"RSI_Mean_Reversion\" &&\n  strategy !== \"Supertrend\"\n) {\n\n  return retry(\n    \"Critic proposed an unsupported strategy. Supported strategies are EMA_Crossover, RSI_Mean_Reversion, and Supertrend.\",\n    proposedConfig\n  );\n\n}\n\n\n// =========================================================\n// PARAMETERS\n// =========================================================\n\nconst parameters =\n  proposedConfig.parameters;\n\n\nif (\n  !parameters ||\n  typeof parameters !== \"object\" ||\n  Array.isArray(parameters)\n) {\n\n  return retry(\n    \"Critic strategy_config is missing valid parameters.\",\n    proposedConfig\n  );\n\n}\n\n\n// =========================================================\n// EMA\n// =========================================================\n\nif (\n  strategy === \"EMA_Crossover\"\n) {\n\n  const fast =\n    Number(\n      parameters.fast_ema\n    );\n\n  const slow =\n    Number(\n      parameters.slow_ema\n    );\n\n\n  if (\n    !Number.isInteger(fast) ||\n    fast < 5 ||\n    fast > 30\n  ) {\n\n    return retry(\n      \"Critic proposed invalid fast_ema. Allowed range is 5-30.\",\n      proposedConfig\n    );\n\n  }\n\n\n  if (\n    !Number.isInteger(slow) ||\n    slow < 20 ||\n    slow > 100\n  ) {\n\n    return retry(\n      \"Critic proposed invalid slow_ema. Allowed range is 20-100.\",\n      proposedConfig\n    );\n\n  }\n\n\n  if (\n    slow <= fast\n  ) {\n\n    return retry(\n      \"Critic proposed slow_ema that is not greater than fast_ema.\",\n      proposedConfig\n    );\n\n  }\n\n}\n\n\n// =========================================================\n// RSI\n// =========================================================\n\nif (\n  strategy === \"RSI_Mean_Reversion\"\n) {\n\n  const rsiPeriod =\n    Number(\n      parameters.rsi_period\n    );\n\n  const oversold =\n    Number(\n      parameters.oversold\n    );\n\n  const overbought =\n    Number(\n      parameters.overbought\n    );\n\n\n  if (\n    !Number.isInteger(rsiPeriod) ||\n    rsiPeriod < 5 ||\n    rsiPeriod > 30\n  ) {\n\n    return retry(\n      \"Critic proposed invalid rsi_period. Allowed range is 5-30.\",\n      proposedConfig\n    );\n\n  }\n\n\n  if (\n    !Number.isFinite(oversold) ||\n    oversold < 20 ||\n    oversold > 40\n  ) {\n\n    return retry(\n      \"Critic proposed invalid oversold. Allowed range is 20-40.\",\n      proposedConfig\n    );\n\n  }\n\n\n  if (\n    !Number.isFinite(overbought) ||\n    overbought < 60 ||\n    overbought > 80\n  ) {\n\n    return retry(\n      \"Critic proposed invalid overbought. Allowed range is 60-80.\",\n      proposedConfig\n    );\n\n  }\n\n\n  if (\n    oversold >= overbought\n  ) {\n\n    return retry(\n      \"Critic proposed oversold that is not less than overbought.\",\n      proposedConfig\n    );\n\n  }\n\n}\n\n\n// =========================================================\n// SUPERTREND\n// =========================================================\n\nif (\n  strategy === \"Supertrend\"\n) {\n\n  const atrPeriod =\n    Number(\n      parameters.atr_period\n    );\n\n  const multiplier =\n    Number(\n      parameters.multiplier\n    );\n\n\n  if (\n    !Number.isInteger(atrPeriod) ||\n    atrPeriod < 5 ||\n    atrPeriod > 30\n  ) {\n\n    return retry(\n      \"Critic proposed invalid atr_period. Allowed range is 5-30.\",\n      proposedConfig\n    );\n\n  }\n\n\n  if (\n    !Number.isFinite(multiplier) ||\n    multiplier < 1 ||\n    multiplier > 5\n  ) {\n\n    return retry(\n      \"Critic proposed invalid multiplier. Allowed range is 1.0-5.0.\",\n      proposedConfig\n    );\n\n  }\n\n}\n\n\n// =========================================================\n// RISK\n// =========================================================\n\nconst risk =\n  proposedConfig.risk;\n\n\nif (\n  !risk ||\n  typeof risk !== \"object\" ||\n  Array.isArray(risk)\n) {\n\n  return retry(\n    \"Critic strategy_config is missing a valid risk object.\",\n    proposedConfig\n  );\n\n}\n\n\n// =========================================================\n// STOP LOSS\n// =========================================================\n\nlet stopLoss =\n  risk.stop_loss;\n\nif (\n  stopLoss !== null &&\n  stopLoss !== undefined\n) {\n\n  stopLoss =\n    Number(\n      stopLoss\n    );\n\n\n  if (\n    !Number.isFinite(stopLoss) ||\n    stopLoss <= 0\n  ) {\n\n    return retry(\n      \"Critic proposed invalid stop_loss.\",\n      proposedConfig\n    );\n\n  }\n\n}\nelse {\n\n  stopLoss = null;\n\n}\n\n\n// =========================================================\n// TAKE PROFIT\n// =========================================================\n\nlet takeProfit =\n  risk.take_profit;\n\nif (\n  takeProfit !== null &&\n  takeProfit !== undefined\n) {\n\n  takeProfit =\n    Number(\n      takeProfit\n    );\n\n\n  if (\n    !Number.isFinite(takeProfit) ||\n    takeProfit <= 0\n  ) {\n\n    return retry(\n      \"Critic proposed invalid take_profit.\",\n      proposedConfig\n    );\n\n  }\n\n}\nelse {\n\n  takeProfit = null;\n\n}\n\n\n// =========================================================\n// CAPITAL\n// =========================================================\n\nconst startingCapital =\n  Number(\n    currentConfig.capital?.starting_capital ||\n    backtest.initial_capital ||\n    backtest.starting_capital ||\n    10000\n  );\n\n\n// =========================================================\n// LOT SIZE\n// =========================================================\n\nlet lotSize =\n  Number(\n    risk.lot_size\n  );\n\n\nif (\n  !Number.isFinite(lotSize) ||\n  lotSize <= 0\n) {\n\n  return retry(\n    \"Critic proposed invalid lot_size.\",\n    proposedConfig\n  );\n\n}\n\n\nif (\n  lotSize > startingCapital\n) {\n\n  return retry(\n    \"Critic proposed lot_size greater than starting capital.\",\n    proposedConfig\n  );\n\n}\n\n\n// =========================================================\n// IMMUTABLE CONTEXT\n// =========================================================\n\nconst instrument =\n  currentConfig.data?.instrument ||\n  backtest.instrument;\n\nconst timeframe =\n  currentConfig.data?.timeframe ||\n  backtest.timeframe;\n\nconst researchRunId =\n  currentConfig.research?.research_run_id ||\n  backtest.research_run_id;\n\n\n// =========================================================\n// IMMUTABLE VALIDATION\n// =========================================================\n\nif (\n  proposedConfig.data?.instrument !== undefined &&\n  proposedConfig.data.instrument !== instrument\n) {\n\n  return retry(\n    \"Critic attempted to change the instrument.\",\n    proposedConfig\n  );\n\n}\n\n\nif (\n  proposedConfig.data?.timeframe !== undefined &&\n  proposedConfig.data.timeframe !== timeframe\n) {\n\n  return retry(\n    \"Critic attempted to change the timeframe.\",\n    proposedConfig\n  );\n\n}\n\n\nif (\n  proposedConfig.capital?.starting_capital !== undefined &&\n  Number(\n    proposedConfig.capital.starting_capital\n  ) !== startingCapital\n) {\n\n  return retry(\n    \"Critic attempted to change starting capital.\",\n    proposedConfig\n  );\n\n}\n\n\nif (\n  proposedConfig.research?.research_run_id !== undefined &&\n  proposedConfig.research.research_run_id !== researchRunId\n) {\n\n  return retry(\n    \"Critic attempted to change research run ID.\",\n    proposedConfig\n  );\n\n}\n\n\n// =========================================================\n// NORMALIZED NEXT CONFIGURATION\n// =========================================================\n\nconst nextConfig = {\n\n  strategy,\n\n  parameters,\n\n  risk: {\n\n    stop_loss:\n      stopLoss,\n\n    take_profit:\n      takeProfit,\n\n    lot_size:\n      lotSize\n\n  },\n\n  data: {\n\n    instrument,\n\n    timeframe\n\n  },\n\n  capital: {\n\n    starting_capital:\n      startingCapital\n\n  },\n\n  research: {\n\n    research_run_id:\n      researchRunId\n\n  }\n\n};\n\n\n// =========================================================\n// CONFIGURATION SIGNATURE\n// =========================================================\n\nfunction configurationSignature(\n  config\n) {\n\n  return JSON.stringify({\n\n    strategy:\n      config.strategy,\n\n    parameters:\n      config.parameters || {},\n\n    risk: {\n\n      stop_loss:\n        config.risk?.stop_loss ??\n        null,\n\n      take_profit:\n        config.risk?.take_profit ??\n        null,\n\n      lot_size:\n        config.risk?.lot_size ??\n        null\n\n    }\n\n  });\n\n}\n\n\nconst proposedSignature =\n  configurationSignature(\n    nextConfig\n  );\n\n\n// =========================================================\n// DUPLICATE CHECK\n// =========================================================\n\nconst alreadyTested =\n  normalizedHistory.some(\n    experiment => {\n\n      if (\n        !experiment.strategy_config\n      ) {\n\n        return false;\n\n      }\n\n      return (\n        configurationSignature(\n          experiment.strategy_config\n        ) ===\n        proposedSignature\n      );\n\n    }\n  );\n\n\nif (\n  alreadyTested\n) {\n\n  return retry(\n    \"The complete proposed configuration has already been tested. Change at least one strategy or risk parameter.\",\n    nextConfig\n  );\n\n}\n\n\n// =========================================================\n// STORE CURRENT EXPERIMENT\n// =========================================================\n\nconst updatedHistory =\n  normalizedHistory.slice();\n\n\nconst currentExperiment = {\n\n  experiment:\n    Number(\n      backtest.experiment || 1\n    ),\n\n  strategy:\n    currentConfig.strategy ||\n    backtest.strategy,\n\n  strategy_config:\n    currentConfig,\n\n  return_percent:\n    Number(\n      backtest.return_percent\n    ),\n\n  trades:\n    Number(\n      backtest.trades\n    ),\n\n  win_rate:\n    Number(\n      backtest.win_rate\n    ),\n\n  profit_factor:\n    Number(\n      backtest.profit_factor\n    ),\n\n  max_drawdown_percent:\n    Number(\n      backtest.max_drawdown_percent\n    ),\n\n  sharpe_ratio:\n    Number(\n      backtest.sharpe_ratio\n    ),\n\n  heat_score:\n    currentHeat.heat_score,\n\n  heat_label:\n    currentHeat.heat_label,\n\n  heat_checks:\n    currentHeat.heat_checks\n};\n\n\nconst alreadyStored =\n  updatedHistory.some(\n    exp =>\n      Number(exp.experiment) ===\n      Number(\n        backtest.experiment\n      )\n  );\n\n\nif (\n  !alreadyStored\n) {\n\n  updatedHistory.push(\n    currentExperiment\n  );\n\n}\n\n\n// =========================================================\n// RETURN NEXT EXPERIMENT\n// =========================================================\n\nreturn [{\n  json: {\n\n    decision:\n      \"MODIFY\",\n\n    retry_required:\n      false,\n\n    reason:\n      parsed.reason ||\n      \"Critic proposed a new configuration.\",\n\n    heat_analysis:\n      parsed.heat_analysis,\n\n    strategy:\n      nextConfig.strategy,\n\n    strategy_config:\n      nextConfig,\n\n    instrument:\n      nextConfig.data.instrument,\n\n    timeframe:\n      nextConfig.data.timeframe,\n\n    starting_capital:\n      startingCapital,\n\n    research_run_id:\n      nextConfig.research.research_run_id,\n\n    experiment:\n      Number(\n        backtest.experiment || 1\n      ),\n\n    max_experiments:\n      Number(\n        backtest.max_experiments || 5\n      ),\n\n    return_percent:\n      Number(\n        backtest.return_percent\n      ),\n\n    trades:\n      Number(\n        backtest.trades\n      ),\n\n    win_rate:\n      Number(\n        backtest.win_rate\n      ),\n\n    profit_factor:\n      Number(\n        backtest.profit_factor\n      ),\n\n    max_drawdown_percent:\n      Number(\n        backtest.max_drawdown_percent\n      ),\n\n    sharpe_ratio:\n      Number(\n        backtest.sharpe_ratio\n      ),\n\n    heat_score:\n      currentHeat.heat_score,\n\n    heat_label:\n      currentHeat.heat_label,\n\n    heat_checks:\n      currentHeat.heat_checks,\n\n    previous_heat_score:\n      previousHeatScore,\n\n    previous_heat_label:\n      previousHeatLabel,\n\n    heat_change:\n      heatChange,\n\n    heat_assessment:\n      heatAssessment,\n\n    history:\n      updatedHistory\n\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2144,
+        0
+      ],
+      "id": "26658386-04ea-486d-a16d-24fe684033f4",
+      "name": "Critic code parser"
+    },
+    {
+      "parameters": {
+        "jsCode": "const history = Array.isArray($json.history)\n  ? $json.history\n  : [];\n\nif (history.length === 0) {\n  throw new Error(\n    \"No experiment history available.\"\n  );\n}\n\n\n// ---------------------------------------------------------\n// Select best experiment using only performance metrics.\n// No strategy-specific parameters are used here.\n// ---------------------------------------------------------\n\nlet best = history[0];\n\nfor (const experiment of history) {\n\n  const currentReturn =\n    Number(experiment.return_percent);\n\n  const bestReturn =\n    Number(best.return_percent);\n\n  // 1. Highest return\n  if (currentReturn > bestReturn) {\n\n    best = experiment;\n    continue;\n  }\n\n  if (currentReturn !== bestReturn) {\n    continue;\n  }\n\n\n  // 2. Highest profit factor\n  const currentPF =\n    Number(experiment.profit_factor);\n\n  const bestPF =\n    Number(best.profit_factor);\n\n  if (currentPF > bestPF) {\n\n    best = experiment;\n    continue;\n  }\n\n  if (currentPF !== bestPF) {\n    continue;\n  }\n\n\n  // 3. Highest Sharpe ratio\n  const currentSharpe =\n    Number(experiment.sharpe_ratio);\n\n  const bestSharpe =\n    Number(best.sharpe_ratio);\n\n  if (currentSharpe > bestSharpe) {\n\n    best = experiment;\n    continue;\n  }\n\n  if (currentSharpe !== bestSharpe) {\n    continue;\n  }\n\n\n  // 4. Better maximum drawdown\n  // Example:\n  // -3% is better than -5%\n  const currentDrawdown =\n    Number(\n      experiment.max_drawdown_percent\n    );\n\n  const bestDrawdown =\n    Number(\n      best.max_drawdown_percent\n    );\n\n  if (\n    currentDrawdown >\n    bestDrawdown\n  ) {\n\n    best = experiment;\n  }\n}\n\n\n// ---------------------------------------------------------\n// Validate selected experiment\n// ---------------------------------------------------------\n\nif (\n  best.experiment === undefined ||\n  best.experiment === null\n) {\n  throw new Error(\n    \"Select Best Strategy could not identify a valid experiment.\"\n  );\n}\n\n\nconst strategyConfig =\n  best.strategy_config;\n\nif (\n  !strategyConfig ||\n  typeof strategyConfig !== \"object\" ||\n  Array.isArray(strategyConfig)\n) {\n  throw new Error(\n    \"Selected experiment does not contain a valid strategy_config.\"\n  );\n}\n\n\n// ---------------------------------------------------------\n// Return selected experiment\n// ---------------------------------------------------------\n\nreturn [{\n  json: {\n\n    best_experiment:\n      Number(\n        best.experiment\n      ),\n\n    strategy:\n      strategyConfig.strategy ||\n      best.strategy,\n\n    strategy_config:\n      strategyConfig,\n\n    return_percent:\n      Number(\n        best.return_percent\n      ),\n\n    trades:\n      Number(\n        best.trades\n      ),\n\n    win_rate:\n      Number(\n        best.win_rate\n      ),\n\n    profit_factor:\n      Number(\n        best.profit_factor\n      ),\n\n    max_drawdown_percent:\n      Number(\n        best.max_drawdown_percent\n      ),\n\n    sharpe_ratio:\n      Number(\n        best.sharpe_ratio\n      ),\n\n    history:\n      history\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3792,
+        176
+      ],
+      "id": "68cb9c01-edf1-496b-bc7a-c823bb3557a1",
+      "name": "Select Best Strategy"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are the validation explanation agent for QuantForge.\n\nThe deterministic validator has already performed all numerical validation checks.\n\nThe deterministic validator is authoritative.\n\nYou MUST NOT independently decide whether the strategy passes or fails.\n\nYou MUST NOT change, reinterpret, or contradict any validation check.\n\n---------------------------------------------------------\nSELECTED STRATEGY\n---------------------------------------------------------\n\nStrategy:\n{{ $(\"Deterministic Validator\").item.json.strategy }}\n\nStrategy Configuration:\n{{ JSON.stringify($(\"Deterministic Validator\").item.json.strategy_config) }}\n\n---------------------------------------------------------\nPERFORMANCE\n---------------------------------------------------------\n\nReturn:\n{{ $(\"Deterministic Validator\").item.json.return_percent }}%\n\nTrades:\n{{ $(\"Deterministic Validator\").item.json.trades }}\n\nWin Rate:\n{{ $(\"Deterministic Validator\").item.json.win_rate }}%\n\nProfit Factor:\n{{ $(\"Deterministic Validator\").item.json.profit_factor }}\n\nMaximum Drawdown:\n{{ $(\"Deterministic Validator\").item.json.max_drawdown_percent }}%\n\nSharpe Ratio:\n{{ $(\"Deterministic Validator\").item.json.sharpe_ratio }}\n\n---------------------------------------------------------\nDETERMINISTIC VALIDATION\n---------------------------------------------------------\n\nValidation:\n{{ $(\"Deterministic Validator\").item.json.validation }}\n\nValidation Checks:\n{{ JSON.stringify($(\"Deterministic Validator\").item.json.validation_checks) }}\n\nValidation Reason:\n{{ $(\"Deterministic Validator\").item.json.validation_reason }}\n\n---------------------------------------------------------\nRULES\n---------------------------------------------------------\n\nYour job is ONLY to explain the deterministic validation result.\n\n1. The value of \"validation\" in your output MUST exactly match the supplied deterministic validation value.\n\n2. If the supplied validation is \"PASS\", output \"PASS\".\n\n3. If the supplied validation is \"FAIL\", output \"FAIL\".\n\n4. Do not change PASS to FAIL.\n\n5. Do not change FAIL to PASS.\n\n6. Explain which validation criteria passed and which failed.\n\n7. Maximum drawdown must be interpreted exactly as follows:\n\n   - A value greater than -10% passes.\n   - A value equal to -10% passes.\n   - A value less than -10% fails.\n   - For example, -3.11% passes the drawdown criterion because -3.11% is greater than -10%.\n\n8. Do not describe a passing criterion as failing.\n\n9. Do not describe a failing criterion as passing.\n\n10. Do not invent additional criteria.\n\n11. Do not make investment recommendations.\n\n12. Do not discuss whether the strategy is suitable for investors.\n\n13. Do not introduce concepts that are not part of the deterministic validation checks.\n\n14. Do not independently calculate alternative metrics.\n\n15. Do not contradict the supplied validation checks.\n\n16. Keep the explanation concise and factual.\n\n17. Return ONLY valid JSON.\n\n---------------------------------------------------------\nOUTPUT\n---------------------------------------------------------\n\nReturn exactly two fields:\n\n{\n  \"validation\": \"<exact value supplied by the deterministic validator>\",\n  \"reason\": \"<brief factual explanation of the deterministic validation checks>\"\n}\n\nThe validation field MUST be either \"PASS\" or \"FAIL\".\n\nThe validation field MUST exactly match:\n\n{{ $(\"Deterministic Validator\").item.json.validation }}\n\nDo not output any other fields.\n\nDo not use markdown.\n\nDo not include text before or after the JSON.",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        4208,
+        176
+      ],
+      "id": "9c77e073-9c14-4cf4-ae70-1ce2a6b08c21",
+      "name": "Validator AI"
+    },
+    {
+      "parameters": {
+        "model": "llama3.2:3b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        4208,
+        432
+      ],
+      "id": "9472bff2-4b76-471c-92e7-b08545f32185",
+      "name": "Ollama Chat Model2",
+      "credentials": {
+        "ollamaApi": {
+          "id": "JXdYuVAkGyE4Wkgt",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const validatorOutput = $json.output;\n\nif (\n  typeof validatorOutput !== \"string\" ||\n  validatorOutput.trim() === \"\"\n) {\n  throw new Error(\n    \"Validator AI output is empty or invalid.\"\n  );\n}\n\nlet text = validatorOutput\n  .replace(/```json/gi, \"\")\n  .replace(/```/g, \"\")\n  .trim();\n\nlet aiValidation;\n\ntry {\n  aiValidation = JSON.parse(text);\n} catch (firstError) {\n  const firstBrace = text.indexOf(\"{\");\n  const lastBrace = text.lastIndexOf(\"}\");\n\n  if (\n    firstBrace === -1 ||\n    lastBrace <= firstBrace\n  ) {\n    throw new Error(\n      \"Validator AI did not return valid JSON.\"\n    );\n  }\n\n  try {\n    aiValidation = JSON.parse(\n      text.substring(\n        firstBrace,\n        lastBrace + 1\n      )\n    );\n  } catch (secondError) {\n    throw new Error(\n      \"Validator AI returned malformed JSON.\"\n    );\n  }\n}\n\n\n// ---------------------------------------------------------\n// Deterministic validator is authoritative\n// ---------------------------------------------------------\n\nconst deterministic =\n  $(\"Deterministic Validator\").item.json;\n\nconst strategyConfig =\n  deterministic.strategy_config || {};\n\nconst parameters =\n  strategyConfig.parameters || {};\n\nconst risk =\n  strategyConfig.risk || {};\n\nconst data =\n  strategyConfig.data || {};\n\nconst capital =\n  strategyConfig.capital || {};\n\nconst research =\n  strategyConfig.research || {};\n\n\n// ---------------------------------------------------------\n// Extract strategy parameters from nested config\n// ---------------------------------------------------------\n\nconst fastEma =\n  parameters.fast_ema !== undefined &&\n  parameters.fast_ema !== null\n    ? Number(parameters.fast_ema)\n    : null;\n\nconst slowEma =\n  parameters.slow_ema !== undefined &&\n  parameters.slow_ema !== null\n    ? Number(parameters.slow_ema)\n    : null;\n\nconst lotSize =\n  risk.lot_size !== undefined &&\n  risk.lot_size !== null\n    ? Number(risk.lot_size)\n    : null;\n\n\n// ---------------------------------------------------------\n// Return final validation state\n// ---------------------------------------------------------\n\nreturn [{\n  json: {\n\n    validation:\n      deterministic.validation,\n\n    validation_reason:\n      aiValidation.reason ||\n      deterministic.validation_reason,\n\n    validation_checks:\n      deterministic.validation_checks,\n\n    minimum_trades_required:\n      deterministic.minimum_trades_required,\n\n    best_experiment:\n      Number(\n        deterministic.best_experiment\n      ),\n\n    strategy:\n      strategyConfig.strategy ||\n      deterministic.strategy,\n\n    strategy_config:\n      strategyConfig,\n\n    parameters:\n      parameters,\n\n    risk:\n      risk,\n\n    data:\n      data,\n\n    capital:\n      capital,\n\n    research:\n      research,\n\n    fast_ema:\n      fastEma,\n\n    slow_ema:\n      slowEma,\n\n    lot_size:\n      lotSize,\n\n    return_percent:\n      Number(\n        deterministic.return_percent\n      ),\n\n    trades:\n      Number(\n        deterministic.trades\n      ),\n\n    win_rate:\n      Number(\n        deterministic.win_rate\n      ),\n\n    profit_factor:\n      Number(\n        deterministic.profit_factor\n      ),\n\n    max_drawdown_percent:\n      Number(\n        deterministic.max_drawdown_percent\n      ),\n\n    sharpe_ratio:\n      Number(\n        deterministic.sharpe_ratio\n      ),\n\n    history:\n      deterministic.history || []\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4592,
+        176
+      ],
+      "id": "dd4dbb33-3cb0-409a-a7ed-d0da05277343",
+      "name": "Validator Parser"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================================\n// QUANTFORGE — FINAL RESEARCH REPORT\n// ============================================================\n// Purpose:\n//   Build the final human-readable research report from the\n//   deterministic workflow output.\n//\n// Important:\n//   Heat is NOT calculated here.\n//   Heat comes from the Python backtest engine and is only\n//   displayed here.\n// ============================================================\n\nconst data = $json;\n\n// ------------------------------------------------------------\n// HELPERS\n// ------------------------------------------------------------\n\nfunction safe(value, fallback = \"N/A\") {\n    return value === undefined || value === null\n        ? fallback\n        : value;\n}\n\nfunction formatNumber(value, decimals = 2) {\n    const n = Number(value);\n\n    if (!Number.isFinite(n)) {\n        return \"N/A\";\n    }\n\n    return n.toFixed(decimals);\n}\n\nfunction formatPercent(value) {\n    const n = Number(value);\n\n    if (!Number.isFinite(n)) {\n        return \"N/A\";\n    }\n\n    return `${n.toFixed(2)}%`;\n}\n\nfunction passFail(value) {\n    return value ? \"PASS\" : \"FAIL\";\n}\n\nfunction heatText(experiment) {\n    const score = safe(experiment.heat_score, \"N/A\");\n    const label = safe(experiment.heat_label, \"N/A\");\n\n    return `${score}/4 — ${label}`;\n}\n\nfunction formatParameters(config) {\n\n    if (!config || typeof config !== \"object\") {\n        return \"N/A\";\n    }\n\n    const parameters = config.parameters;\n\n    if (!parameters || typeof parameters !== \"object\") {\n        return \"N/A\";\n    }\n\n    const parts = [];\n\n    for (const [key, value] of Object.entries(parameters)) {\n        parts.push(`${key}: ${value}`);\n    }\n\n    return parts.join(\", \");\n}\n\nfunction formatRisk(config) {\n\n    if (!config || typeof config !== \"object\") {\n        return \"N/A\";\n    }\n\n    const risk = config.risk;\n\n    if (!risk || typeof risk !== \"object\") {\n        return \"N/A\";\n    }\n\n    return [\n        `stop_loss: ${safe(risk.stop_loss)}`,\n        `take_profit: ${safe(risk.take_profit)}`,\n        `lot_size: ${safe(risk.lot_size)}`\n    ].join(\", \");\n}\n\nfunction formatData(config) {\n\n    if (!config || typeof config !== \"object\") {\n        return \"N/A\";\n    }\n\n    const dataConfig = config.data;\n\n    if (!dataConfig || typeof dataConfig !== \"object\") {\n        return \"N/A\";\n    }\n\n    return [\n        `instrument: ${safe(dataConfig.instrument)}`,\n        `timeframe: ${safe(dataConfig.timeframe)}`\n    ].join(\", \");\n}\n\nfunction formatCapital(config) {\n\n    if (!config || typeof config !== \"object\") {\n        return \"N/A\";\n    }\n\n    const capital = config.capital;\n\n    if (!capital || typeof capital !== \"object\") {\n        return \"N/A\";\n    }\n\n    return `starting_capital: ${safe(capital.starting_capital)}`;\n}\n\nfunction formatResearch(config) {\n\n    if (!config || typeof config !== \"object\") {\n        return \"N/A\";\n    }\n\n    const research = config.research;\n\n    if (!research || typeof research !== \"object\") {\n        return \"N/A\";\n    }\n\n    return `research_run_id: ${safe(research.research_run_id)}`;\n}\n\n\n// ------------------------------------------------------------\n// EXTRACT CORE DATA\n// ------------------------------------------------------------\n\nconst strategyConfig = data.strategy_config || {};\n\nconst strategy =\n    data.strategy ||\n    strategyConfig.strategy ||\n    \"N/A\";\n\nconst history =\n    Array.isArray(data.history)\n        ? data.history\n        : [];\n\nconst bestExperiment = data.best_experiment;\n\nconst validation =\n    data.validation ||\n    \"UNKNOWN\";\n\nconst validationChecks =\n    data.validation_checks &&\n    typeof data.validation_checks === \"object\"\n        ? data.validation_checks\n        : {};\n\nconst validationReason =\n    data.validation_reason ||\n    \"No validator explanation provided.\";\n\nconst researchObjective =\n    data.research_objective ||\n    \"Not provided.\";\n\nconst instrument =\n    data.instrument ||\n    strategyConfig?.data?.instrument ||\n    \"N/A\";\n\nconst timeframe =\n    data.timeframe ||\n    strategyConfig?.data?.timeframe ||\n    \"N/A\";\n\n\n// ------------------------------------------------------------\n// FIND BEST EXPERIMENT FROM HISTORY\n// ------------------------------------------------------------\n\nlet bestExperimentData = null;\n\nif (history.length > 0) {\n\n    bestExperimentData = history.find(\n        experiment =>\n            Number(experiment.experiment) === Number(bestExperiment)\n    );\n\n    // Fallback if exact experiment number wasn't found.\n    if (!bestExperimentData) {\n\n        bestExperimentData = history[history.length - 1];\n    }\n}\n\n\n// ------------------------------------------------------------\n// FINAL METRICS\n// ------------------------------------------------------------\n\nconst finalReturn =\n    bestExperimentData?.return_percent ??\n    data.return_percent;\n\nconst finalTrades =\n    bestExperimentData?.trades ??\n    data.trades;\n\nconst finalWinRate =\n    bestExperimentData?.win_rate ??\n    data.win_rate;\n\nconst finalProfitFactor =\n    bestExperimentData?.profit_factor ??\n    data.profit_factor;\n\nconst finalDrawdown =\n    bestExperimentData?.max_drawdown_percent ??\n    data.max_drawdown_percent;\n\nconst finalSharpe =\n    bestExperimentData?.sharpe_ratio ??\n    data.sharpe_ratio;\n\nconst finalHeatScore =\n    bestExperimentData?.heat_score ??\n    data.heat_score;\n\nconst finalHeatLabel =\n    bestExperimentData?.heat_label ??\n    data.heat_label;\n\nconst finalHeatChecks =\n    bestExperimentData?.heat_checks ??\n    data.heat_checks ??\n    {};\n\n\n// ------------------------------------------------------------\n// BUILD REPORT\n// ------------------------------------------------------------\n\nlet report = \"\";\n\nreport += \"QUANTFORGE RESEARCH REPORT\\n\";\nreport += \"===========================\\n\\n\";\n\nreport += `Research Objective:\\n`;\nreport += `${researchObjective}\\n\\n`;\n\nreport += `Instrument: ${instrument}\\n`;\nreport += `Timeframe: ${timeframe}\\n`;\nreport += `Strategy: ${strategy}\\n`;\nreport += `Experiments Conducted: ${history.length}\\n\\n`;\n\n\n// ============================================================\n// EXPERIMENT RESULTS\n// ============================================================\n\nreport += \"EXPERIMENT RESULTS\\n\";\nreport += \"------------------\\n\\n\";\n\nfor (let index = 0; index < history.length; index++) {\n\n    const experiment = history[index];\n\n    if (!experiment || typeof experiment !== \"object\") {\n        continue;\n    }\n\n    const config =\n        experiment.strategy_config &&\n        typeof experiment.strategy_config === \"object\"\n            ? experiment.strategy_config\n            : {};\n\n    report += `Experiment ${safe(experiment.experiment, index + 1)}\\n`;\n\n    report += `Strategy: ${safe(\n        config.strategy || experiment.strategy,\n        \"N/A\"\n    )}\\n`;\n\n    report += `Parameters: ${formatParameters(config)}\\n`;\n\n    report += `Risk: ${formatRisk(config)}\\n`;\n\n    report += `Data: ${formatData(config)}\\n`;\n\n    report += `Capital: ${formatCapital(config)}\\n`;\n\n    report += `Research: ${formatResearch(config)}\\n`;\n\n    report += `Return: ${formatPercent(experiment.return_percent)}\\n`;\n\n    report += `Trades: ${safe(experiment.trades)}\\n`;\n\n    report += `Win Rate: ${formatPercent(experiment.win_rate)}\\n`;\n\n    report += `Profit Factor: ${formatNumber(\n        experiment.profit_factor\n    )}\\n`;\n\n    report += `Maximum Drawdown: ${formatPercent(\n        experiment.max_drawdown_percent\n    )}\\n`;\n\n    report += `Sharpe Ratio: ${formatNumber(\n        experiment.sharpe_ratio\n    )}\\n`;\n\n    // --------------------------------------------------------\n    // HEAT\n    // --------------------------------------------------------\n\n    report += `Heat Score: ${heatText(experiment)}\\n`;\n\n    const heatChecks =\n        experiment.heat_checks &&\n        typeof experiment.heat_checks === \"object\"\n            ? experiment.heat_checks\n            : {};\n\n    report += \"Heat Checks:\\n\";\n\n    report += `  Positive Return: ${passFail(\n        heatChecks.positive_return\n    )}\\n`;\n\n    report += `  Profit Factor > 1: ${passFail(\n        heatChecks.profit_factor_above_1\n    )}\\n`;\n\n    report += `  Sharpe Ratio > 0: ${passFail(\n        heatChecks.positive_sharpe\n    )}\\n`;\n\n    report += `  Drawdown > -10%: ${passFail(\n        heatChecks.drawdown_better_than_10_percent\n    )}\\n`;\n\n    report += \"\\n\";\n}\n\n\n// ============================================================\n// HEAT PROGRESSION\n// ============================================================\n\nreport += \"HEAT PROGRESSION\\n\";\nreport += \"----------------\\n\\n\";\n\nif (history.length === 0) {\n\n    report += \"No experiment history available.\\n\\n\";\n\n} else {\n\n    for (let index = 0; index < history.length; index++) {\n\n        const experiment = history[index];\n\n        if (!experiment || typeof experiment !== \"object\") {\n            continue;\n        }\n\n        report +=\n            `Experiment ${safe(experiment.experiment, index + 1)}: ` +\n            `${heatText(experiment)}\\n`;\n    }\n\n    report += \"\\n\";\n\n    for (let index = 1; index < history.length; index++) {\n\n        const previous = history[index - 1];\n        const current = history[index];\n\n        const previousScore = Number(previous.heat_score);\n        const currentScore = Number(current.heat_score);\n\n        if (\n            Number.isFinite(previousScore) &&\n            Number.isFinite(currentScore)\n        ) {\n\n            const change = currentScore - previousScore;\n\n            const sign =\n                change > 0\n                    ? \"+\"\n                    : \"\";\n\n            report +=\n                `Experiment ${previous.experiment} → ` +\n                `Experiment ${current.experiment}: ` +\n                `${sign}${change} Heat points\\n`;\n        }\n    }\n\n    report += \"\\n\";\n}\n\n\n// ============================================================\n// BEST STRATEGY\n// ============================================================\n\nreport += \"BEST STRATEGY\\n\";\nreport += \"-------------\\n\";\n\nreport += `Experiment: ${safe(bestExperiment)}\\n`;\n\nreport += `Strategy: ${strategy}\\n`;\n\nreport += `Parameters: ${formatParameters(strategyConfig)}\\n`;\n\nreport += `Risk: ${formatRisk(strategyConfig)}\\n`;\n\nreport += `Data: ${formatData(strategyConfig)}\\n`;\n\nreport += `Capital: ${formatCapital(strategyConfig)}\\n`;\n\nreport += `Research: ${formatResearch(strategyConfig)}\\n`;\n\nreport += `Return: ${formatPercent(finalReturn)}\\n`;\n\nreport += `Trades: ${safe(finalTrades)}\\n`;\n\nreport += `Win Rate: ${formatPercent(finalWinRate)}\\n`;\n\nreport += `Profit Factor: ${formatNumber(finalProfitFactor)}\\n`;\n\nreport += `Maximum Drawdown: ${formatPercent(finalDrawdown)}\\n`;\n\nreport += `Sharpe Ratio: ${formatNumber(finalSharpe)}\\n`;\n\nreport += `Heat Score: ${safe(finalHeatScore)}/4\\n`;\n\nreport += `Heat Label: ${safe(finalHeatLabel)}\\n`;\n\nreport += \"\\n\";\n\nreport += \"Heat Checks:\\n\";\n\nreport += `Positive Return: ${passFail(\n    finalHeatChecks.positive_return\n)}\\n`;\n\nreport += `Profit Factor > 1: ${passFail(\n    finalHeatChecks.profit_factor_above_1\n)}\\n`;\n\nreport += `Sharpe Ratio > 0: ${passFail(\n    finalHeatChecks.positive_sharpe\n)}\\n`;\n\nreport += `Maximum Drawdown > -10%: ${passFail(\n    finalHeatChecks.drawdown_better_than_10_percent\n)}\\n`;\n\nreport += \"\\n\";\n\n\n// ============================================================\n// VALIDATION\n// ============================================================\n\nreport += \"VALIDATION\\n\";\nreport += \"----------\\n\";\n\nreport += `Validation: ${validation}\\n\\n`;\n\nreport += \"Validation Checks:\\n\";\n\nreport += `Positive Return: ${passFail(\n    validationChecks.positive_return\n)}\\n`;\n\nreport += `Profit Factor > 1: ${passFail(\n    validationChecks.profit_factor_above_1\n)}\\n`;\n\nreport += `Sharpe Ratio > 0: ${passFail(\n    validationChecks.positive_sharpe\n)}\\n`;\n\nreport += `Maximum Drawdown > -10%: ${passFail(\n    validationChecks.drawdown_better_than_10_percent\n)}\\n`;\n\nreport += `Trade Count >= 100: ${passFail(\n    validationChecks.reasonable_trade_count\n)}\\n`;\n\nreport += \"\\n\";\n\nreport += \"Validator Explanation:\\n\";\nreport += `${validationReason}\\n\\n`;\n\n\n// ============================================================\n// CONCLUSION\n// ============================================================\n\nreport += \"CONCLUSION\\n\";\nreport += \"----------\\n\";\n\nreport +=\n    `Experiment ${safe(bestExperiment)} was selected as ` +\n    `the best candidate from the experiments conducted. `;\n\nreport +=\n    `The selected configuration produced a return of ` +\n    `${formatPercent(finalReturn)}, ` +\n    `profit factor of ${formatNumber(finalProfitFactor)}, ` +\n    `Sharpe ratio of ${formatNumber(finalSharpe)}, ` +\n    `and maximum drawdown of ${formatPercent(finalDrawdown)}. `;\n\nreport +=\n    `Its deterministic Heat Score was ` +\n    `${safe(finalHeatScore)}/4 (${safe(finalHeatLabel)}). `;\n\nreport +=\n    `The deterministic validation stage marked the strategy ` +\n    `as ${validation}.`;\n\n\n// ------------------------------------------------------------\n// OUTPUT\n// ------------------------------------------------------------\n\nreturn [\n    {\n        json: {\n            ...data,\n\n            report,\n\n            // Explicit reporting fields\n            report_instrument: instrument,\n            report_timeframe: timeframe,\n            report_strategy: strategy,\n\n            final_heat_score: finalHeatScore,\n            final_heat_label: finalHeatLabel,\n            final_heat_checks: finalHeatChecks,\n\n            report_best_experiment: bestExperiment,\n\n            // Filename convention:\n            // <instrument>_<timeframe>_<strategy>.pdf\n            report_filename:\n                `${String(instrument).trim()}_` +\n                `${String(timeframe).trim()}_` +\n                `${String(strategy).trim()}.pdf`\n        }\n    }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4880,
+        176
+      ],
+      "id": "9d63f8b2-59fe-4cc8-aa91-a110719f129b",
+      "name": "Final Research Report"
+    },
+    {
+      "parameters": {
+        "jsCode": "const best = $json;\n\nconst minTrades = 100;\n\nconst checks = {\n  positive_return: Number(best.return_percent) > 0,\n  profit_factor_above_1: Number(best.profit_factor) > 1,\n  positive_sharpe: Number(best.sharpe_ratio) > 0,\n  drawdown_better_than_10_percent: Number(best.max_drawdown_percent) > -10,\n  reasonable_trade_count: Number(best.trades) >= minTrades\n};\n\nconst passed = Object.values(checks).every(Boolean);\n\nconst failedChecks = Object.entries(checks)\n  .filter(([key, value]) => !value)\n  .map(([key]) => key);\n\nlet validationReason;\n\nif (passed) {\n  validationReason =\n    \"The strategy satisfies all deterministic validation criteria.\";\n} else {\n  validationReason =\n    \"The strategy failed the following validation criteria: \" +\n    failedChecks.join(\", \") + \".\";\n}\n\nreturn [{\n  json: {\n    ...best,\n\n    validation: passed ? \"PASS\" : \"FAIL\",\n\n    validation_checks: checks,\n\n    validation_reason: validationReason,\n\n    minimum_trades_required: minTrades\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4016,
+        176
+      ],
+      "id": "94b4518d-c9f6-461d-bc8e-418ba0fa4126",
+      "name": "Deterministic Validator"
+    },
+    {
+      "parameters": {
+        "jsCode": "const config = $json.strategy_config;\n\nif (!config || typeof config !== \"object\") {\n  throw new Error(\"Researcher did not provide a valid strategy_config.\");\n}\n\nif (!config.strategy) {\n  throw new Error(\"strategy_config.strategy is missing.\");\n}\n\nif (!config.parameters || typeof config.parameters !== \"object\") {\n  throw new Error(\"strategy_config.parameters is missing or invalid.\");\n}\n\nif (!config.risk || typeof config.risk !== \"object\") {\n  throw new Error(\"strategy_config.risk is missing or invalid.\");\n}\n\nif (!config.data || typeof config.data !== \"object\") {\n  throw new Error(\"strategy_config.data is missing or invalid.\");\n}\n\nif (!config.capital || typeof config.capital !== \"object\") {\n  throw new Error(\"strategy_config.capital is missing or invalid.\");\n}\n\nif (!config.research || typeof config.research !== \"object\") {\n  throw new Error(\"strategy_config.research is missing or invalid.\");\n}\n\n\n// ---------------------------------------------------------\n// Supported strategy families\n// ---------------------------------------------------------\n\nconst supportedStrategies = [\n  \"EMA_Crossover\",\n  \"RSI_Mean_Reversion\",\n  \"Supertrend\"\n];\n\nif (!supportedStrategies.includes(config.strategy)) {\n  throw new Error(\n    `Unsupported strategy family: ${config.strategy}`\n  );\n}\n\n\n// ---------------------------------------------------------\n// Preserve complete configuration\n// ---------------------------------------------------------\n\nconst strategyConfig = {\n  strategy: config.strategy,\n  parameters: config.parameters,\n  risk: config.risk,\n  data: config.data,\n  research: config.research,\n  capital: config.capital\n};\n\n\n// ---------------------------------------------------------\n// Compatibility fields\n// ---------------------------------------------------------\n// These are kept because the current HTTP Request and some\n// existing n8n nodes still reference them.\n\nconst parameters = strategyConfig.parameters;\nconst risk = strategyConfig.risk;\n\nreturn [\n  {\n    json: {\n      ...$json,\n\n      strategy_config: strategyConfig,\n\n      strategy: strategyConfig.strategy,\n\n      fast_ema:\n        parameters.fast_ema !== undefined\n          ? Number(parameters.fast_ema)\n          : null,\n\n      slow_ema:\n        parameters.slow_ema !== undefined\n          ? Number(parameters.slow_ema)\n          : null,\n\n      rsi_period:\n        parameters.rsi_period !== undefined\n          ? Number(parameters.rsi_period)\n          : null,\n\n      oversold:\n        parameters.oversold !== undefined\n          ? Number(parameters.oversold)\n          : null,\n\n      overbought:\n        parameters.overbought !== undefined\n          ? Number(parameters.overbought)\n          : null,\n\n      atr_period:\n        parameters.atr_period !== undefined\n          ? Number(parameters.atr_period)\n          : null,\n\n      multiplier:\n        parameters.multiplier !== undefined\n          ? Number(parameters.multiplier)\n          : null,\n\n      stop_loss:\n        risk.stop_loss !== undefined\n          ? Number(risk.stop_loss)\n          : null,\n\n      take_profit:\n        risk.take_profit !== undefined\n          ? Number(risk.take_profit)\n          : null,\n\n      lot_size:\n        risk.lot_size !== undefined\n          ? Number(risk.lot_size)\n          : null\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1216,
+        0
+      ],
+      "id": "05713072-3572-48e7-901a-3a0f2de203fc",
+      "name": "Strategy Config"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "efe97aef-8c4e-4896-a931-3ba7c9eee395",
+              "leftValue": "={{ $json.decision }}",
+              "rightValue": "RETRY",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2512,
+        0
+      ],
+      "id": "b0b00e88-3657-4e90-bba3-182528da06ed",
+      "name": "Critic Decision Valid?"
+    },
+    {
+      "parameters": {
+        "jsCode": "// =========================================================\n// QuantForge - Researcher Parser\n// =========================================================\n// Purpose:\n// 1. Parse Researcher AI output\n// 2. Validate exactly ONE strategy family\n// 3. Validate strategy-specific parameters\n// 4. Validate common risk parameters\n// 5. Preserve immutable research context\n// 6. Reject malformed AI output\n// 7. Support retry loop back to Researcher AI\n// 8. Produce one canonical strategy_config\n// =========================================================\n\n\n// =========================================================\n// ORIGINAL RESEARCH CONTEXT\n// =========================================================\n\nlet originalInput = {};\n\ntry {\n\n  originalInput =\n    $(\"Edit Fields\").first().json || {};\n\n} catch (error) {\n\n  originalInput = {};\n\n}\n\n\n// =========================================================\n// RESEARCHER AI OUTPUT\n// =========================================================\n\nconst output =\n  $json.output;\n\n\n// =========================================================\n// EXTRACT POSSIBLE STRATEGY CONFIG\n// =========================================================\n\nlet initialResearcherConfig = {};\n\nif (\n  $json.strategy_config &&\n  typeof $json.strategy_config === \"object\" &&\n  !Array.isArray($json.strategy_config)\n) {\n\n  initialResearcherConfig =\n    $json.strategy_config;\n\n}\n\n\n// ---------------------------------------------------------\n// Nested context from Researcher AI\n// ---------------------------------------------------------\n\nconst initialData =\n  initialResearcherConfig.data &&\n  typeof initialResearcherConfig.data === \"object\"\n    ? initialResearcherConfig.data\n    : {};\n\nconst initialResearch =\n  initialResearcherConfig.research &&\n  typeof initialResearcherConfig.research === \"object\"\n    ? initialResearcherConfig.research\n    : {};\n\nconst initialCapital =\n  initialResearcherConfig.capital &&\n  typeof initialResearcherConfig.capital === \"object\"\n    ? initialResearcherConfig.capital\n    : {};\n\n\n// =========================================================\n// IMMUTABLE RESEARCH CONTEXT\n// =========================================================\n\nconst researchObjective =\n  originalInput.research_objective ||\n  $json.research_objective ||\n  \"\";\n\nconst researchRunId =\n  originalInput.research_run_id ||\n  $json.research_run_id ||\n  initialResearch.research_run_id;\n\nconst instrument =\n  originalInput.instrument ||\n  $json.instrument ||\n  initialData.instrument;\n\nconst timeframe =\n  originalInput.timeframe ||\n  $json.timeframe ||\n  initialData.timeframe;\n\nconst startingCapital =\n  Number(\n    originalInput.starting_capital ??\n    $json.starting_capital ??\n    initialCapital.starting_capital ??\n    10000\n  );\n\nconst experiment =\n  Number(\n    originalInput.experiment ??\n    $json.experiment ??\n    1\n  );\n\nconst maxExperiments =\n  Number(\n    originalInput.max_experiments ??\n    $json.max_experiments ??\n    5\n  );\n\n\n// =========================================================\n// HISTORY\n// =========================================================\n\nconst history =\n  Array.isArray($json.history)\n    ? $json.history\n    : [];\n\n\n// =========================================================\n// RETRY HELPER\n// =========================================================\n\nfunction retry(reason) {\n\n  return [{\n    json: {\n\n      retry_required:\n        true,\n\n      retry_reason:\n        reason,\n\n      research_objective:\n        researchObjective,\n\n      research_run_id:\n        researchRunId,\n\n      instrument:\n        instrument,\n\n      timeframe:\n        timeframe,\n\n      starting_capital:\n        startingCapital,\n\n      experiment:\n        experiment,\n\n      max_experiments:\n        maxExperiments,\n\n      history:\n        history\n\n    }\n  }];\n\n}\n\n\n// =========================================================\n// BASIC CONTEXT VALIDATION\n// =========================================================\n\nif (!instrument) {\n\n  return retry(\n    \"Instrument is missing.\"\n  );\n\n}\n\nif (!timeframe) {\n\n  return retry(\n    \"Timeframe is missing.\"\n  );\n\n}\n\nif (\n  !Number.isFinite(startingCapital) ||\n  startingCapital <= 0\n) {\n\n  return retry(\n    \"Starting capital must be greater than zero.\"\n  );\n\n}\n\nif (\n  !Number.isInteger(experiment) ||\n  experiment < 1\n) {\n\n  return retry(\n    \"Experiment number is invalid.\"\n  );\n\n}\n\nif (\n  !Number.isInteger(maxExperiments) ||\n  maxExperiments < 1\n) {\n\n  return retry(\n    \"max_experiments is invalid.\"\n  );\n\n}\n\n\n// =========================================================\n// PARSE RESEARCHER OUTPUT\n// =========================================================\n\nlet parsed = null;\n\n\ntry {\n\n  // -------------------------------------------------------\n  // Case 1: output is already an object\n  // -------------------------------------------------------\n\n  if (\n    output &&\n    typeof output === \"object\" &&\n    !Array.isArray(output)\n  ) {\n\n    parsed =\n      output;\n\n  }\n\n  // -------------------------------------------------------\n  // Case 2: output is a JSON string\n  // -------------------------------------------------------\n\n  else {\n\n    let text =\n      String(output || \"\").trim();\n\n\n    if (!text) {\n\n      return retry(\n        \"Researcher returned empty output.\"\n      );\n\n    }\n\n\n    // Remove Markdown fences\n\n    text =\n      text\n        .replace(/^```json\\s*/i, \"\")\n        .replace(/^```\\s*/i, \"\")\n        .replace(/\\s*```$/i, \"\")\n        .trim();\n\n\n    // First attempt: entire string\n\n    try {\n\n      parsed =\n        JSON.parse(text);\n\n    } catch (directError) {\n\n      // ---------------------------------------------------\n      // Extract first JSON object\n      // ---------------------------------------------------\n\n      const start =\n        text.indexOf(\"{\");\n\n      const end =\n        text.lastIndexOf(\"}\");\n\n\n      if (\n        start !== -1 &&\n        end !== -1 &&\n        end > start\n      ) {\n\n        parsed =\n          JSON.parse(\n            text.substring(\n              start,\n              end + 1\n            )\n          );\n\n      }\n\n    }\n\n  }\n\n} catch (error) {\n\n  return retry(\n    \"Researcher output was not valid JSON.\"\n  );\n\n}\n\n\n// =========================================================\n// PARSED OBJECT VALIDATION\n// =========================================================\n\nif (\n  !parsed ||\n  typeof parsed !== \"object\" ||\n  Array.isArray(parsed)\n) {\n\n  return retry(\n    \"Researcher did not return a valid JSON object.\"\n  );\n\n}\n\n\n// =========================================================\n// GET STRATEGY CONFIG\n// =========================================================\n\nlet proposedConfig =\n  parsed.strategy_config;\n\n\n// ---------------------------------------------------------\n// Fallback:\n// Some outputs may put strategy directly at root.\n// ---------------------------------------------------------\n\nif (\n  !proposedConfig ||\n  typeof proposedConfig !== \"object\" ||\n  Array.isArray(proposedConfig)\n) {\n\n  proposedConfig = {\n\n    strategy:\n      parsed.strategy,\n\n    parameters:\n      parsed.parameters,\n\n    risk:\n      parsed.risk,\n\n    data:\n      parsed.data,\n\n    research:\n      parsed.research,\n\n    capital:\n      parsed.capital\n\n  };\n\n}\n\n\n// =========================================================\n// STRATEGY\n// =========================================================\n\nlet strategy =\n  proposedConfig.strategy;\n\n\n// =========================================================\n// SUPPORTED STRATEGIES\n// =========================================================\n\nconst supportedStrategies = [\n\n  \"EMA_Crossover\",\n\n  \"RSI_Mean_Reversion\",\n\n  \"Supertrend\"\n\n];\n\n\n// =========================================================\n// DETECT MULTIPLE STRATEGIES\n// =========================================================\n\nif (\n  typeof strategy === \"string\"\n) {\n\n  const strategyText =\n    strategy.trim();\n\n\n  const detectedStrategies =\n    supportedStrategies.filter(\n      candidate =>\n        strategyText.includes(candidate)\n    );\n\n\n  // -------------------------------------------------------\n  // More than one strategy detected\n  // -------------------------------------------------------\n\n  if (\n    detectedStrategies.length > 1\n  ) {\n\n    return retry(\n      \"Researcher returned multiple strategy families: \" +\n      detectedStrategies.join(\", \") +\n      \". Select exactly ONE strategy family.\"\n    );\n\n  }\n\n}\n\n\n// =========================================================\n// NORMALIZE COMMON STRATEGY ALIASES\n// =========================================================\n\nif (\n  strategy === \"EMA Crossover\"\n) {\n\n  strategy =\n    \"EMA_Crossover\";\n\n}\n\nif (\n  strategy === \"RSI Mean Reversion\"\n) {\n\n  strategy =\n    \"RSI_Mean_Reversion\";\n\n}\n\nif (\n  strategy === \"RSI_Mean-Reversion\"\n) {\n\n  strategy =\n    \"RSI_Mean_Reversion\";\n\n}\n\n\n// =========================================================\n// FINAL STRATEGY VALIDATION\n// =========================================================\n\nif (\n  typeof strategy !== \"string\" ||\n  !supportedStrategies.includes(strategy)\n) {\n\n  return retry(\n    \"Unsupported strategy family. Select exactly one of EMA_Crossover, RSI_Mean_Reversion, or Supertrend.\"\n  );\n\n}\n\n\n// =========================================================\n// PARAMETERS\n// =========================================================\n\nlet parameters =\n  proposedConfig.parameters;\n\n\nif (\n  !parameters ||\n  typeof parameters !== \"object\" ||\n  Array.isArray(parameters)\n) {\n\n  parameters = {};\n\n}\n\n\n// =========================================================\n// RISK\n// =========================================================\n\nlet risk =\n  proposedConfig.risk;\n\n\nif (\n  !risk ||\n  typeof risk !== \"object\" ||\n  Array.isArray(risk)\n) {\n\n  risk = {};\n\n}\n\n\n// =========================================================\n// EMA CROSSOVER\n// =========================================================\n\nif (\n  strategy === \"EMA_Crossover\"\n) {\n\n  const fastEma =\n    Number(\n      parameters.fast_ema ??\n      parsed.fast_ema\n    );\n\n  const slowEma =\n    Number(\n      parameters.slow_ema ??\n      parsed.slow_ema\n    );\n\n\n  // -------------------------------------------------------\n  // fast EMA\n  // -------------------------------------------------------\n\n  if (\n    !Number.isInteger(fastEma) ||\n    fastEma < 5 ||\n    fastEma > 30\n  ) {\n\n    return retry(\n      \"Invalid fast_ema. It must be an integer between 5 and 30.\"\n    );\n\n  }\n\n\n  // -------------------------------------------------------\n  // slow EMA\n  // -------------------------------------------------------\n\n  if (\n    !Number.isInteger(slowEma) ||\n    slowEma < 20 ||\n    slowEma > 100\n  ) {\n\n    return retry(\n      \"Invalid slow_ema. It must be an integer between 20 and 100.\"\n    );\n\n  }\n\n\n  // -------------------------------------------------------\n  // EMA ordering\n  // -------------------------------------------------------\n\n  if (\n    slowEma <= fastEma\n  ) {\n\n    return retry(\n      \"slow_ema must be greater than fast_ema.\"\n    );\n\n  }\n\n\n  // -------------------------------------------------------\n  // IMPORTANT:\n  // Only EMA parameters survive.\n  // Any RSI/Supertrend parameters are discarded.\n  // -------------------------------------------------------\n\n  parameters = {\n\n    fast_ema:\n      fastEma,\n\n    slow_ema:\n      slowEma\n\n  };\n\n}\n\n\n// =========================================================\n// RSI MEAN REVERSION\n// =========================================================\n\nif (\n  strategy === \"RSI_Mean_Reversion\"\n) {\n\n  const rsiPeriod =\n    Number(\n      parameters.rsi_period ??\n      parsed.rsi_period\n    );\n\n  const oversold =\n    Number(\n      parameters.oversold ??\n      parsed.oversold\n    );\n\n  const overbought =\n    Number(\n      parameters.overbought ??\n      parsed.overbought\n    );\n\n\n  // -------------------------------------------------------\n  // RSI period\n  // -------------------------------------------------------\n\n  if (\n    !Number.isInteger(rsiPeriod) ||\n    rsiPeriod < 5 ||\n    rsiPeriod > 30\n  ) {\n\n    return retry(\n      \"Invalid rsi_period. It must be an integer between 5 and 30.\"\n    );\n\n  }\n\n\n  // -------------------------------------------------------\n  // Oversold\n  // -------------------------------------------------------\n\n  if (\n    !Number.isFinite(oversold) ||\n    oversold < 20 ||\n    oversold > 40\n  ) {\n\n    return retry(\n      \"Invalid oversold value. It must be between 20 and 40.\"\n    );\n\n  }\n\n\n  // -------------------------------------------------------\n  // Overbought\n  // -------------------------------------------------------\n\n  if (\n    !Number.isFinite(overbought) ||\n    overbought < 60 ||\n    overbought > 80\n  ) {\n\n    return retry(\n      \"Invalid overbought value. It must be between 60 and 80.\"\n    );\n\n  }\n\n\n  // -------------------------------------------------------\n  // RSI relationship\n  // -------------------------------------------------------\n\n  if (\n    oversold >= overbought\n  ) {\n\n    return retry(\n      \"oversold must be less than overbought.\"\n    );\n\n  }\n\n\n  // -------------------------------------------------------\n  // Only RSI parameters survive\n  // -------------------------------------------------------\n\n  parameters = {\n\n    rsi_period:\n      rsiPeriod,\n\n    oversold:\n      oversold,\n\n    overbought:\n      overbought\n\n  };\n\n}\n\n\n// =========================================================\n// SUPERTREND\n// =========================================================\n\nif (\n  strategy === \"Supertrend\"\n) {\n\n  const atrPeriod =\n    Number(\n      parameters.atr_period ??\n      parsed.atr_period\n    );\n\n  const multiplier =\n    Number(\n      parameters.multiplier ??\n      parsed.multiplier\n    );\n\n\n  // -------------------------------------------------------\n  // ATR period\n  // -------------------------------------------------------\n\n  if (\n    !Number.isInteger(atrPeriod) ||\n    atrPeriod < 5 ||\n    atrPeriod > 30\n  ) {\n\n    return retry(\n      \"Invalid atr_period. It must be an integer between 5 and 30.\"\n    );\n\n  }\n\n\n  // -------------------------------------------------------\n  // Multiplier\n  // -------------------------------------------------------\n\n  if (\n    !Number.isFinite(multiplier) ||\n    multiplier < 1 ||\n    multiplier > 5\n  ) {\n\n    return retry(\n      \"Invalid multiplier. It must be between 1 and 5.\"\n    );\n\n  }\n\n\n  // -------------------------------------------------------\n  // Only Supertrend parameters survive\n  // -------------------------------------------------------\n\n  parameters = {\n\n    atr_period:\n      atrPeriod,\n\n    multiplier:\n      multiplier\n\n  };\n\n}\n\n\n// =========================================================\n// COMMON RISK PARAMETERS\n// =========================================================\n\nconst stopLoss =\n  Number(\n    risk.stop_loss ??\n    parsed.stop_loss\n  );\n\nconst takeProfit =\n  Number(\n    risk.take_profit ??\n    parsed.take_profit\n  );\n\nconst lotSize =\n  Number(\n    risk.lot_size ??\n    parsed.lot_size\n  );\n\n\n// =========================================================\n// STOP LOSS\n// =========================================================\n\nif (\n  !Number.isFinite(stopLoss) ||\n  stopLoss <= 0\n) {\n\n  return retry(\n    \"stop_loss must be a positive number.\"\n  );\n\n}\n\n\n// =========================================================\n// TAKE PROFIT\n// =========================================================\n\nif (\n  !Number.isFinite(takeProfit) ||\n  takeProfit <= 0\n) {\n\n  return retry(\n    \"take_profit must be a positive number.\"\n  );\n\n}\n\n\n// =========================================================\n// LOT SIZE\n// =========================================================\n\nif (\n  !Number.isFinite(lotSize) ||\n  lotSize <= 0\n) {\n\n  return retry(\n    \"lot_size must be greater than zero.\"\n  );\n\n}\n\n\nif (\n  lotSize > startingCapital\n) {\n\n  return retry(\n    \"lot_size cannot be greater than starting capital.\"\n  );\n\n}\n\n\n// =========================================================\n// CANONICAL STRATEGY CONFIG\n// =========================================================\n\nconst strategyConfig = {\n\n  strategy:\n    strategy,\n\n  parameters:\n    parameters,\n\n  risk: {\n\n    stop_loss:\n      stopLoss,\n\n    take_profit:\n      takeProfit,\n\n    lot_size:\n      lotSize\n\n  },\n\n  data: {\n\n    instrument:\n      instrument,\n\n    timeframe:\n      timeframe\n\n  },\n\n  research: {\n\n    research_run_id:\n      researchRunId\n\n  },\n\n  capital: {\n\n    starting_capital:\n      startingCapital\n\n  }\n\n};\n\n\n// =========================================================\n// DUPLICATE CONFIGURATION CHECK\n// =========================================================\n\nfunction createSignature(config) {\n\n  return JSON.stringify({\n\n    strategy:\n      config.strategy,\n\n    parameters:\n      config.parameters,\n\n    stop_loss:\n      config.risk?.stop_loss,\n\n    take_profit:\n      config.risk?.take_profit,\n\n    lot_size:\n      config.risk?.lot_size\n\n  });\n\n}\n\n\nconst newSignature =\n  createSignature(\n    strategyConfig\n  );\n\n\nconst duplicate =\n  history.some(\n    experimentRecord => {\n\n      if (\n        !experimentRecord ||\n        typeof experimentRecord !== \"object\"\n      ) {\n\n        return false;\n\n      }\n\n\n      const previousConfig =\n        experimentRecord.strategy_config;\n\n\n      if (\n        !previousConfig ||\n        typeof previousConfig !== \"object\"\n      ) {\n\n        return false;\n\n      }\n\n\n      return (\n        createSignature(\n          previousConfig\n        ) ===\n        newSignature\n      );\n\n    }\n  );\n\n\nif (\n  duplicate\n) {\n\n  return retry(\n    \"Researcher proposed a strategy configuration that already exists in experiment history. Propose a different configuration.\"\n  );\n\n}\n\n\n// =========================================================\n// FINAL OUTPUT\n// =========================================================\n\nreturn [{\n  json: {\n\n    retry_required:\n      false,\n\n    retry_reason:\n      null,\n\n    research_objective:\n      researchObjective,\n\n    research_run_id:\n      researchRunId,\n\n    instrument:\n      instrument,\n\n    timeframe:\n      timeframe,\n\n    starting_capital:\n      startingCapital,\n\n    experiment:\n      experiment,\n\n    max_experiments:\n      maxExperiments,\n\n    strategy:\n      strategy,\n\n    strategy_config:\n      strategyConfig,\n\n\n    // -----------------------------------------------------\n    // Compatibility fields\n    // -----------------------------------------------------\n\n    fast_ema:\n      strategy === \"EMA_Crossover\"\n        ? parameters.fast_ema\n        : null,\n\n    slow_ema:\n      strategy === \"EMA_Crossover\"\n        ? parameters.slow_ema\n        : null,\n\n\n    rsi_period:\n      strategy === \"RSI_Mean_Reversion\"\n        ? parameters.rsi_period\n        : null,\n\n    oversold:\n      strategy === \"RSI_Mean_Reversion\"\n        ? parameters.oversold\n        : null,\n\n    overbought:\n      strategy === \"RSI_Mean_Reversion\"\n        ? parameters.overbought\n        : null,\n\n\n    atr_period:\n      strategy === \"Supertrend\"\n        ? parameters.atr_period\n        : null,\n\n    multiplier:\n      strategy === \"Supertrend\"\n        ? parameters.multiplier\n        : null,\n\n\n    stop_loss:\n      stopLoss,\n\n    take_profit:\n      takeProfit,\n\n    lot_size:\n      lotSize,\n\n    history:\n      history\n\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        816,
+        0
+      ],
+      "id": "d093f2d6-3701-4e72-a4b1-6bba93382ef7",
+      "name": "Researcher_parser"
+    },
+    {
+      "parameters": {
+        "jsCode": "const current = $json;\n\nconst strategyConfig =\n  current.strategy_config || {};\n\nconst history =\n  Array.isArray(current.history)\n    ? current.history\n    : [];\n\nconst dataConfig =\n  strategyConfig.data || {};\n\nconst capitalConfig =\n  strategyConfig.capital || {};\n\nconst researchConfig =\n  strategyConfig.research || {};\n\nreturn [{\n  json: {\n\n    // ---------------------------------------------------\n    // Decision from Critic\n    // ---------------------------------------------------\n\n    decision:\n      current.decision,\n\n    reason:\n      current.reason,\n\n    // ---------------------------------------------------\n    // Research state\n    // ---------------------------------------------------\n\n    research_objective:\n      current.research_objective,\n\n    research_run_id:\n      current.research_run_id ||\n      researchConfig.research_run_id,\n\n    instrument:\n      current.instrument ||\n      dataConfig.instrument,\n\n    timeframe:\n      current.timeframe ||\n      dataConfig.timeframe,\n\n    starting_capital:\n      Number(\n        current.starting_capital ||\n        capitalConfig.starting_capital ||\n        10000\n      ),\n\n    experiment:\n      Number(\n        current.experiment || 1\n      ),\n\n    max_experiments:\n      Number(\n        current.max_experiments || 5\n      ),\n\n    // ---------------------------------------------------\n    // Strategy configuration\n    // ---------------------------------------------------\n\n    strategy:\n      strategyConfig.strategy ||\n      current.strategy,\n\n    strategy_config:\n      strategyConfig,\n\n    // ---------------------------------------------------\n    // Compatibility fields\n    // ---------------------------------------------------\n\n    fast_ema:\n      Number(\n        strategyConfig.parameters?.fast_ema ??\n        current.fast_ema ??\n        0\n      ),\n\n    slow_ema:\n      Number(\n        strategyConfig.parameters?.slow_ema ??\n        current.slow_ema ??\n        0\n      ),\n\n    lot_size:\n      strategyConfig.risk?.lot_size !== null &&\n      strategyConfig.risk?.lot_size !== undefined\n        ? Number(\n            strategyConfig.risk.lot_size\n          )\n        : null,\n\n    // ---------------------------------------------------\n    // Experiment history\n    // ---------------------------------------------------\n\n    history:\n      history\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2832,
+        -16
+      ],
+      "id": "156c5af6-2ae0-448c-9e6c-166b862efeec",
+      "name": "Experiment State"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:8000/backtest",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "experiment",
+              "value": "={{ Number($json.experiment) }}"
+            },
+            {
+              "name": "max_experiments",
+              "value": "={{ Number($json.max_experiments) }}"
+            },
+            {
+              "name": "history",
+              "value": "={{ $json.history || [] }}"
+            },
+            {
+              "name": "strategy_config",
+              "value": "={{ $json.strategy_config }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1360,
+        0
+      ],
+      "id": "d58247f3-8a3c-4028-b739-209bdf4b90d4",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "fca336b1-0aba-4aad-b037-ed9084935cfe",
+              "leftValue": "={{ $json.retry_required }}",
+              "rightValue": "=true",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1008,
+        0
+      ],
+      "id": "ad719c81-a739-48da-9c2d-8c84d109790b",
+      "name": "If2"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ============================================================\n// QUANTFORGE — PREPARE PDF PAYLOAD\n// ============================================================\n\nconst payload = {\n    ...$json\n};\n\n// ------------------------------------------------------------\n// BASIC VALIDATION\n// ------------------------------------------------------------\n\nif (!payload.strategy_config) {\n    throw new Error(\n        \"PDF payload error: strategy_config is missing.\"\n    );\n}\n\nif (!Array.isArray(payload.history)) {\n    throw new Error(\n        \"PDF payload error: history is missing or is not an array.\"\n    );\n}\n\nif (payload.best_experiment === undefined) {\n    throw new Error(\n        \"PDF payload error: best_experiment is missing.\"\n    );\n}\n\nif (!payload.validation) {\n    throw new Error(\n        \"PDF payload error: validation result is missing.\"\n    );\n}\n\n// ------------------------------------------------------------\n// VERIFY HEAT EXISTS\n// ------------------------------------------------------------\n\nfor (const experiment of payload.history) {\n\n    if (!experiment || typeof experiment !== \"object\") {\n        continue;\n    }\n\n    if (\n        experiment.heat_score === undefined ||\n        experiment.heat_label === undefined\n    ) {\n        throw new Error(\n            `PDF payload error: Heat data missing for experiment ${\n                experiment.experiment ?? \"unknown\"\n            }.`\n        );\n    }\n}\n\n// ------------------------------------------------------------\n// METADATA\n// ------------------------------------------------------------\n\nconst strategyConfig =\n    payload.strategy_config || {};\n\nconst dataConfig =\n    strategyConfig.data || {};\n\nconst instrument =\n    payload.instrument ||\n    dataConfig.instrument;\n\nconst timeframe =\n    payload.timeframe ||\n    dataConfig.timeframe;\n\nconst strategy =\n    payload.strategy ||\n    strategyConfig.strategy;\n\nif (!instrument) {\n    throw new Error(\n        \"PDF payload error: instrument is missing.\"\n    );\n}\n\nif (!timeframe) {\n    throw new Error(\n        \"PDF payload error: timeframe is missing.\"\n    );\n}\n\nif (!strategy) {\n    throw new Error(\n        \"PDF payload error: strategy is missing.\"\n    );\n}\n\n// ------------------------------------------------------------\n// REPORT METADATA\n// ------------------------------------------------------------\n\npayload.report_instrument = instrument;\npayload.report_timeframe = timeframe;\npayload.report_strategy = strategy;\n\npayload.report_filename =\n    `${String(instrument).trim()}_` +\n    `${String(timeframe).trim()}_` +\n    `${String(strategy).trim()}.pdf`;\n\n// ------------------------------------------------------------\n// RETURN NORMAL JSON\n// ------------------------------------------------------------\n\nreturn [\n    {\n        json: payload\n    }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5104,
+        176
+      ],
+      "id": "499c1bb0-fcd4-4bd2-a9b7-28e544ef4931",
+      "name": "Prepare PDF Payload"
+    },
+    {
+      "parameters": {
+        "command": "=C:\\Users\\aj\\Documents\\QuantForge\\venv\\Scripts\\python.exe C:\\Users\\aj\\Documents\\QuantForge\\quant_engine\\report_generator.py C:\\Users\\aj\\Documents\\QuantForge\\pdf_payload.json"
+      },
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        5888,
+        176
+      ],
+      "id": "b3beb51b-b676-44a5-a0fb-832d2f73d386",
+      "name": "Execute Command"
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// ============================================================\n// QUANTFORGE — FINAL PDF RESULT PARSER\n// ============================================================\n//\n// The Python report generator is authoritative for the PDF\n// path and filename.\n//\n// The Prepare PDF Payload node is authoritative for the\n// final research result.\n//\n// This node combines both.\n// ============================================================\n\n\nconst stdout = $json.stdout;\n\n\nif (!stdout) {\n\n    throw new Error(\n        \"PDF generation returned no output.\"\n    );\n\n}\n\n\nlet result;\n\n\ntry {\n\n    result = JSON.parse(\n        stdout.trim()\n    );\n\n}\ncatch (error) {\n\n    throw new Error(\n        \"Could not parse report_generator.py output.\\n\\n\" +\n        stdout\n    );\n\n}\n\n\nif (!result.report_path) {\n\n    throw new Error(\n        \"PDF generator did not return report_path.\"\n    );\n\n}\n\n\n// ------------------------------------------------------------\n// GET FINAL RESEARCH PAYLOAD\n// ------------------------------------------------------------\n\nlet finalPayload = {};\n\ntry {\n\n    finalPayload =\n        $(\"Prepare PDF Payload\").first().json || {};\n\n}\ncatch (error) {\n\n    finalPayload = {};\n}\n\n\n// ------------------------------------------------------------\n// HISTORY\n// ------------------------------------------------------------\n\nconst history =\n    Array.isArray(finalPayload.history)\n        ? finalPayload.history\n        : [];\n\n\n// ------------------------------------------------------------\n// BEST EXPERIMENT\n// ------------------------------------------------------------\n\nconst bestExperiment =\n    finalPayload.best_experiment;\n\n\n// ------------------------------------------------------------\n// FINAL METRICS\n// ------------------------------------------------------------\n\nlet finalHeatScore =\n    finalPayload.final_heat_score;\n\nlet finalHeatLabel =\n    finalPayload.final_heat_label;\n\n\n// If final Heat is missing, use the selected\n// experiment's Heat.\n\nif (\n    finalHeatScore === undefined &&\n    bestExperiment !== undefined\n) {\n\n    const selected =\n        history.find(\n            item =>\n                Number(item.experiment) ===\n                Number(bestExperiment)\n        );\n\n    if (selected) {\n\n        finalHeatScore =\n            selected.heat_score;\n\n        finalHeatLabel =\n            selected.heat_label;\n\n    }\n\n}\n\n\n// ------------------------------------------------------------\n// RETURN FINAL DASHBOARD PAYLOAD\n// ------------------------------------------------------------\n\nreturn [\n    {\n        json: {\n\n            ...finalPayload,\n\n            pdf_generated: true,\n\n            report_path:\n                result.report_path,\n\n            report_filename:\n                result.report_filename,\n\n            report_download_ready:\n                true,\n\n            report_generator_strategy:\n                result.strategy,\n\n            report_generator_best_experiment:\n                result.best_experiment,\n\n            trades_used_for_charts:\n                result.trades_used_for_charts,\n\n            final_heat_score:\n                finalHeatScore,\n\n            final_heat_label:\n                finalHeatLabel,\n\n            history,\n\n            best_experiment:\n                bestExperiment\n\n        }\n    }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6144,
+        176
+      ],
+      "id": "bc470b41-7d13-4aba-9abf-d4e6d191b096",
+      "name": "PDF Result Parser"
+    },
+    {
+      "parameters": {
+        "operation": "toJson",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        5408,
+        176
+      ],
+      "id": "910c220c-be18-4133-a4ad-fd15b5347b96",
+      "name": "Convert to File"
+    },
+    {
+      "parameters": {
+        "operation": "write",
+        "fileName": "C:\\Users\\aj\\Documents\\QuantForge\\pdf_payload.json",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1.1,
+      "position": [
+        5632,
+        176
+      ],
+      "id": "c28e6687-3408-4b80-8d8a-a3ddd7e854c3",
+      "name": "Read/Write Files from Disk"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "quantforge-research",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -240,
+        240
+      ],
+      "id": "10890a92-da2c-46e9-beb7-92ec3a873d8c",
+      "name": "QuantForge Webhook",
+      "webhookId": "a0dcf415-1eb0-43b0-bd1c-a6fa4c772435"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Researcher AI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Researcher AI",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Critic AI",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Select Best Strategy",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Prepare Next Experiment",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Select Best Strategy",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Researcher AI": {
+      "main": [
+        [
+          {
+            "node": "Researcher_parser",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Critic AI": {
+      "main": [
+        [
+          {
+            "node": "Critic code parser",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Critic code parser": {
+      "main": [
+        [
+          {
+            "node": "Critic Decision Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Next Experiment": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Select Best Strategy": {
+      "main": [
+        [
+          {
+            "node": "Deterministic Validator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Chat Model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Validator AI",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validator AI": {
+      "main": [
+        [
+          {
+            "node": "Validator Parser",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validator Parser": {
+      "main": [
+        [
+          {
+            "node": "Final Research Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Deterministic Validator": {
+      "main": [
+        [
+          {
+            "node": "Validator AI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Strategy Config": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Critic Decision Valid?": {
+      "main": [
+        [
+          {
+            "node": "Experiment State",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Critic AI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Researcher_parser": {
+      "main": [
+        [
+          {
+            "node": "If2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Experiment State": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Critic AI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If2": {
+      "main": [
+        [
+          {
+            "node": "Researcher AI",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Strategy Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Final Research Report": {
+      "main": [
+        [
+          {
+            "node": "Prepare PDF Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare PDF Payload": {
+      "main": [
+        [
+          {
+            "node": "Convert to File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute Command": {
+      "main": [
+        [
+          {
+            "node": "PDF Result Parser",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert to File": {
+      "main": [
+        [
+          {
+            "node": "Read/Write Files from Disk",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read/Write Files from Disk": {
+      "main": [
+        [
+          {
+            "node": "Execute Command",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "QuantForge Webhook": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "a630f578-b912-4580-bfe3-77bc376953c6",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "54d2e34651354fbe24debfaf81ab0d54c8eeecb81ae696ab6d04f2f849c88b7d"
+  },
+  "nodeGroups": [],
+  "id": "d5pIpIV5I9AiMVMz",
+  "tags": []
+}

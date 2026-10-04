@@ -1,0 +1,207 @@
+[
+  {
+    "report": "QUANTFORGE RESEARCH REPORT\n===========================\n\nStrategy: RSI_Mean_Reversion\nExperiments Conducted: 5\n\nEXPERIMENT RESULTS\n------------------\nExperiment 1\nStrategy: EMA_Crossover\nParameters: fast_ema: 10, slow_ema: 40\nRisk: stop_loss: 0.001, take_profit: 0.002, lot_size: 5000\nData: instrument: EURUSD, timeframe: 15m\nCapital: starting_capital: 10000\nResearch: research_run_id: demo_run_001\nReturn: -0.5%\nTrades: 181\nWin Rate: 27.62%\nProfit Factor: 0.9\nMaximum Drawdown: -0.97%\nSharpe Ratio: -0.61\n\nExperiment 2\nStrategy: EMA_Crossover\nParameters: fast_ema: 20, slow_ema: 40\nRisk: stop_loss: 0.002, take_profit: 0.002, lot_size: 3000\nData: instrument: EURUSD, timeframe: 15m\nCapital: starting_capital: 10000\nResearch: research_run_id: demo_run_001\nReturn: 0.03%\nTrades: 125\nWin Rate: 33.6%\nProfit Factor: 1.01\nMaximum Drawdown: -0.44%\nSharpe Ratio: 0.05\n\nExperiment 3\nStrategy: RSI_Mean_Reversion\nParameters: rsi_period: 25, oversold: 30, overbought: 70\nRisk: stop_loss: 0.001, take_profit: 0.002, lot_size: 4000\nData: instrument: EURUSD, timeframe: 15m\nCapital: starting_capital: 10000\nResearch: research_run_id: demo_run_001\nReturn: 0.4%\nTrades: 103\nWin Rate: 39.81%\nProfit Factor: 1.16\nMaximum Drawdown: -0.78%\nSharpe Ratio: 0.69\n\nExperiment 4\nStrategy: EMA_Crossover\nParameters: fast_ema: 15, slow_ema: 50\nRisk: stop_loss: 0.0015, take_profit: 0.0025, lot_size: 4000\nData: instrument: EURUSD, timeframe: 15m\nCapital: starting_capital: 10000\nResearch: research_run_id: demo_run_001\nReturn: -0.58%\nTrades: 131\nWin Rate: 29.01%\nProfit Factor: 0.84\nMaximum Drawdown: -0.84%\nSharpe Ratio: -0.84\n\nExperiment 5\nStrategy: EMA_Crossover\nParameters: fast_ema: 12, slow_ema: 32\nRisk: stop_loss: 0.002, take_profit: 0.003, lot_size: 6000\nData: instrument: EURUSD, timeframe: 15m\nCapital: starting_capital: 10000\nResearch: research_run_id: demo_run_001\nReturn: -1.32%\nTrades: 195\nWin Rate: 26.15%\nProfit Factor: 0.82\nMaximum Drawdown: -1.96%\nSharpe Ratio: -1.06\n\nBEST STRATEGY\n-------------\nExperiment: 3\nStrategy: RSI_Mean_Reversion\nParameters: rsi_period: 25, oversold: 30, overbought: 70\nRisk: stop_loss: 0.001, take_profit: 0.002, lot_size: 4000\nData: instrument: EURUSD, timeframe: 15m\nCapital: starting_capital: 10000\nResearch: research_run_id: demo_run_001\nReturn: 0.4%\nTrades: 103\nWin Rate: 39.81%\nProfit Factor: 1.16\nMaximum Drawdown: -0.78%\nSharpe Ratio: 0.69\n\nVALIDATION\n----------\nValidation: PASS\n\nValidation Checks:\nPositive Return: PASS\nProfit Factor > 1: PASS\nSharpe Ratio > 0: PASS\nMaximum Drawdown > -10%: PASS\nTrade Count >= 100: PASS\n\nValidator Explanation:\nThe strategy satisfies all deterministic validation criteria, including positive return, profit factor above 1, positive Sharpe ratio, reasonable trade count, and drawdown better than 10%.\n\nCONCLUSION\n----------\nThe selected strategy passed the deterministic QuantForge validation criteria and is accepted as the best candidate from the experiments conducted.",
+    "validation": "PASS",
+    "best_experiment": 3,
+    "strategy": "RSI_Mean_Reversion",
+    "strategy_config": {
+      "strategy": "RSI_Mean_Reversion",
+      "parameters": {
+        "rsi_period": 25,
+        "oversold": 30,
+        "overbought": 70
+      },
+      "risk": {
+        "stop_loss": 0.001,
+        "take_profit": 0.002,
+        "lot_size": 4000
+      },
+      "data": {
+        "instrument": "EURUSD",
+        "timeframe": "15m"
+      },
+      "capital": {
+        "starting_capital": 10000
+      },
+      "research": {
+        "research_run_id": "demo_run_001"
+      }
+    },
+    "return_percent": 0.4,
+    "trades": 103,
+    "win_rate": 39.81,
+    "profit_factor": 1.16,
+    "max_drawdown_percent": -0.78,
+    "sharpe_ratio": 0.69,
+    "validation_checks": {
+      "positive_return": true,
+      "profit_factor_above_1": true,
+      "positive_sharpe": true,
+      "drawdown_better_than_10_percent": true,
+      "reasonable_trade_count": true
+    },
+    "history": [
+      {
+        "experiment": 1,
+        "strategy": "EMA_Crossover",
+        "strategy_config": {
+          "strategy": "EMA_Crossover",
+          "parameters": {
+            "fast_ema": 10,
+            "slow_ema": 40
+          },
+          "risk": {
+            "stop_loss": 0.001,
+            "take_profit": 0.002,
+            "lot_size": 5000
+          },
+          "data": {
+            "instrument": "EURUSD",
+            "timeframe": "15m"
+          },
+          "capital": {
+            "starting_capital": 10000
+          },
+          "research": {
+            "research_run_id": "demo_run_001"
+          }
+        },
+        "return_percent": -0.5,
+        "trades": 181,
+        "win_rate": 27.62,
+        "profit_factor": 0.9,
+        "max_drawdown_percent": -0.97,
+        "sharpe_ratio": -0.61
+      },
+      {
+        "experiment": 2,
+        "strategy": "EMA_Crossover",
+        "strategy_config": {
+          "strategy": "EMA_Crossover",
+          "parameters": {
+            "fast_ema": 20,
+            "slow_ema": 40
+          },
+          "risk": {
+            "stop_loss": 0.002,
+            "take_profit": 0.002,
+            "lot_size": 3000
+          },
+          "data": {
+            "instrument": "EURUSD",
+            "timeframe": "15m"
+          },
+          "capital": {
+            "starting_capital": 10000
+          },
+          "research": {
+            "research_run_id": "demo_run_001"
+          }
+        },
+        "return_percent": 0.03,
+        "trades": 125,
+        "win_rate": 33.6,
+        "profit_factor": 1.01,
+        "max_drawdown_percent": -0.44,
+        "sharpe_ratio": 0.05
+      },
+      {
+        "experiment": 3,
+        "strategy": "RSI_Mean_Reversion",
+        "strategy_config": {
+          "strategy": "RSI_Mean_Reversion",
+          "parameters": {
+            "rsi_period": 25,
+            "oversold": 30,
+            "overbought": 70
+          },
+          "risk": {
+            "stop_loss": 0.001,
+            "take_profit": 0.002,
+            "lot_size": 4000
+          },
+          "data": {
+            "instrument": "EURUSD",
+            "timeframe": "15m"
+          },
+          "capital": {
+            "starting_capital": 10000
+          },
+          "research": {
+            "research_run_id": "demo_run_001"
+          }
+        },
+        "return_percent": 0.4,
+        "trades": 103,
+        "win_rate": 39.81,
+        "profit_factor": 1.16,
+        "max_drawdown_percent": -0.78,
+        "sharpe_ratio": 0.69
+      },
+      {
+        "experiment": 4,
+        "strategy": "EMA_Crossover",
+        "strategy_config": {
+          "strategy": "EMA_Crossover",
+          "parameters": {
+            "fast_ema": 15,
+            "slow_ema": 50
+          },
+          "risk": {
+            "stop_loss": 0.0015,
+            "take_profit": 0.0025,
+            "lot_size": 4000
+          },
+          "data": {
+            "instrument": "EURUSD",
+            "timeframe": "15m"
+          },
+          "capital": {
+            "starting_capital": 10000
+          },
+          "research": {
+            "research_run_id": "demo_run_001"
+          }
+        },
+        "return_percent": -0.58,
+        "trades": 131,
+        "win_rate": 29.01,
+        "profit_factor": 0.84,
+        "max_drawdown_percent": -0.84,
+        "sharpe_ratio": -0.84
+      },
+      {
+        "experiment": 5,
+        "strategy": "EMA_Crossover",
+        "strategy_config": {
+          "strategy": "EMA_Crossover",
+          "parameters": {
+            "fast_ema": 12,
+            "slow_ema": 32
+          },
+          "risk": {
+            "stop_loss": 0.002,
+            "take_profit": 0.003,
+            "lot_size": 6000
+          },
+          "data": {
+            "instrument": "EURUSD",
+            "timeframe": "15m"
+          },
+          "capital": {
+            "starting_capital": 10000
+          },
+          "research": {
+            "research_run_id": "demo_run_001"
+          }
+        },
+        "return_percent": -1.32,
+        "trades": 195,
+        "win_rate": 26.15,
+        "profit_factor": 0.82,
+        "max_drawdown_percent": -1.96,
+        "sharpe_ratio": -1.06
+      }
+    ]
+  }
+]
